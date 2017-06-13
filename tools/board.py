@@ -6,6 +6,7 @@ from glob import glob
 import os
 import subprocess
 import shlex
+import time
 
 from . import arduino
 from . import library
@@ -33,6 +34,10 @@ class Board(object):
         ''' If the board has some core libraries that must be implicitly
             included, return them here '''
         return []
+
+    def upload(self, hexfile, port=None):
+        ''' Upload the specified image to the device '''
+        raise NotImplementedError()
 
 
 class FQBN(Board):
@@ -153,3 +158,95 @@ class FQBN(Board):
             'recipe.objcopy.hex.pattern', prefs))
         print(cmd)
         subprocess.check_call(cmd)
+
+    def upload(self, hexfile, port=None):
+        a = arduino.get()
+        prefs = a.board_prefs(self.fqbn)
+        prefs.update(self.prefs)
+        build_dir = os.path.dirname(hexfile)
+
+        # The recipe adds .hex, so avoid doubling up
+        hexfile, _ = os.path.splitext(hexfile)
+
+        prefs['build.path'] = build_dir
+        prefs['build.project_name'] = os.path.basename(hexfile)
+
+        tool = prefs['upload.tool']
+
+        params = {
+            'arduino:avrdude': {
+                'key': 'tools.avrdude',
+                'port_glob': '/dev/cu.*',
+                'need_port': True,
+            },
+            'nrfutil': {
+                'key': 'tools.nrfutil',
+                'port_glob': '/dev/cu.SLAB*',
+                'need_port': True,
+            },
+            'teensyloader': {
+                'key': 'tools.teensyloader',
+                'port_glob': None,
+                'need_port': False,
+            },
+        }
+
+        if tool not in params:
+            pprint(prefs)
+            print("I don't know how to upload using %s" % tool)
+            return
+
+        params = params[tool]
+        key = params['key']
+
+        verbose = True
+        prefs['upload.verbose'] = '{%s.upload.params.verbose}' % key \
+            if verbose \
+            else '{%s.upload.params.quiet}' % key
+
+        if verbose:
+            print('Dict for flashing')
+            pprint(prefs)
+
+        try:
+            pref_serial_port = a.resolve_pref('serial.port', prefs)
+        except KeyError:
+            pref_serial_port = None
+
+        while True:
+            device = None
+
+            if params['need_port']:
+                if port:
+                    device = port
+                elif params['port_glob']:
+                    devices = glob(params['port_glob'])
+                    if len(devices) == 1:
+                        device = devices[0]
+                    elif len(devices) > 0:
+                        print(
+                            'Ambiguous set of devices; please reset the appropriate one manually!')
+                        pprint(devices)
+                        device = pref_serial_port
+
+                if device:
+                    prefs['serial.port'] = device
+
+                if device:
+                    # try to persuade the device to jump to the bootloader
+                    # (this doesn't seem to work with all hardware)
+                    subprocess.call(['stty', '-f', device, '1200'])
+                elif not pref_serial_port:
+                    print('Waiting for device to appear')
+                    time.sleep(1)
+                    continue
+
+            cmd = a.resolve_pref('%s.upload.pattern' % key, prefs)
+            cmd = self._cmd_split(cmd)
+            pprint(cmd)
+
+            time.sleep(1)
+            result = subprocess.call(cmd)
+            if result == 0:
+                break
+            print('(Failed, will retry)')

@@ -1,13 +1,16 @@
 #pragma once
 #ifdef __AVR__
 #include <avr/io.h>
-#define pdMS_TO_TICKS(xTimeInMs) (xTimeInMs / portTICK_PERIOD_MS)
+//#define pdMS_TO_TICKS(xTimeInMs) (xTimeInMs / portTICK_PERIOD_MS)
 #define configMINIMAL_STACK_SIZE 85U
 #define portPOINTER_SIZE_TYPE uint16_t
-#elif defined(__MKL26Z64__) || defined(ARDUINO_SAMD_FEATHER_M0)
-#define configMINIMAL_STACK_SIZE 400U
-#define portPOINTER_SIZE_TYPE uint32_t
 #define configTICK_RATE_HZ 66
+#define configUSE_16_BIT_TICKS 1
+#elif defined(__MKL26Z64__) || defined(ARDUINO_SAMD_FEATHER_M0)
+#define configMINIMAL_STACK_SIZE 100U
+#define portPOINTER_SIZE_TYPE uint32_t
+#define configTICK_RATE_HZ 1000
+#define configUSE_16_BIT_TICKS 0
 #endif
 
 #define configUSE_PREEMPTION 1
@@ -17,7 +20,6 @@
 #define configMAX_PRIORITIES 4
 #define configMAX_TASK_NAME_LEN 1
 #define configUSE_TRACE_FACILITY 0
-#define configUSE_16_BIT_TICKS 1
 #define configIDLE_SHOULD_YIELD 1
 #define configUSE_TICKLESS_IDLE 1
 #define configUSE_MUTEXES 1

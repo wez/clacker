@@ -97,7 +97,6 @@ class Firmware(targets.Target):
         mkdir_p(outputs)
 
         deps = self._expand_deps() + self.board.injected_deps()
-        print(deps)
 
         to_link = []
         for d in deps:
@@ -112,3 +111,11 @@ class Firmware(targets.Target):
 
         hex = os.path.join(outputs, '%s.hex' % self.name)
         self.board.exe_to_hex(exe, hex)
+
+    def upload(self, port=None):
+        outputs = os.path.realpath(
+            os.path.join(
+                'outputs',
+                self.full_name.replace(':', '/')))
+        hex = os.path.join(outputs, '%s.hex' % self.name)
+        self.board.upload(hex, port=port)

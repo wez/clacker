@@ -73,6 +73,7 @@
 
 /* Scheduler includes. */
 #include "FreeRTOS.h"
+#include "kinetis.h"
 #include "task.h"
 
 /* Constants required to manipulate the NVIC. */
@@ -496,11 +497,17 @@ void xPortPendSVHandler(void) {
 }
 /*-----------------------------------------------------------*/
 
+static void (*orig_tick_handler)(void);
+
 void xPortSysTickHandler(void) {
   uint32_t ulPreviousMask;
 
   ulPreviousMask = portSET_INTERRUPT_MASK_FROM_ISR();
   {
+    if (orig_tick_handler) {
+      // Increment tick counter for the arduino delay function
+      orig_tick_handler();
+    }
     /* Increment the RTOS tick. */
     if (xTaskIncrementTick() != pdFALSE) {
       /* Pend a context switch. */
@@ -519,6 +526,15 @@ void prvSetupTimerInterrupt(void) {
   /* Stop and reset the SysTick. */
   *(portNVIC_SYSTICK_CTRL) = 0UL;
   *(portNVIC_SYSTICK_CURRENT_VALUE) = 0UL;
+
+  // With the ticks turned off, co-opt the tick ISR
+  typedef void (*isr_func)(void);
+  isr_func* vectors = (isr_func*)SCB_VTOR;
+
+  orig_tick_handler = vectors[15];
+  vectors[15] = xPortSysTickHandler;
+
+  vectors[14] = xPortPendSVHandler;
 
   /* Configure SysTick to interrupt at the requested rate. */
   *(portNVIC_SYSTICK_LOAD) = (configCPU_CLOCK_HZ / configTICK_RATE_HZ) - 1UL;

@@ -7,15 +7,15 @@
 
 clacker::Task<> blinker([] {
   while (true) {
-    digitalWrite(PIN_LED, true);
+    digitalWrite(PIN_LED, !digitalRead(PIN_LED));
     vTaskDelay(300 / portTICK_PERIOD_MS);
-    digitalWrite(PIN_LED, false);
-    vTaskDelay(200 / portTICK_PERIOD_MS);
   }
 });
 
 void setup(void) {
+  pinMode(PIN_LED, OUTPUT);
   blinker.start();
+  vTaskStartScheduler();
 }
 
 void loop(void) {}

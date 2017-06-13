@@ -9,9 +9,9 @@ class Task {
   using Func = void (*)();
   TaskHandle_t t_;
   Func f_;
-#ifdef configSUPPORT_STATIC_ALLOCATION
+#if configSUPPORT_STATIC_ALLOCATION == 1
   StaticTask_t tBuf_;
-  uint8_t stack_[StackSize];
+  StackType_t stack_[StackSize];
 #endif
 
   static void run(void* self_p) {
@@ -25,15 +25,8 @@ class Task {
   Task(Task&&) = delete;
 
   void start() {
-#ifdef configSUPPORT_STATIC_ALLOCATION
-    t_ = xTaskCreateStatic(
-        run,
-        0,
-        sizeof(stack_),
-        this,
-        Priority,
-        reinterpret_cast<StackType_t*>(stack_),
-        &tBuf_);
+#if configSUPPORT_STATIC_ALLOCATION == 1
+    t_ = xTaskCreateStatic(run, 0, StackSize, this, Priority, stack_, &tBuf_);
 #else
     xTaskCreate(run, 0, StackSize, this, Priority, &t_);
 #endif

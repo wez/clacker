@@ -22,11 +22,12 @@ def do_build(args):
         sys.stderr.write('%s is not a firmware target\n' % args.build)
         sys.exit(1)
     f.build()
+    return f
 
 
 def do_upload(args):
-    do_build(args)
-    pass
+    f = do_build(args)
+    f.upload(args.port)
 
 
 def do_tidy(args):
