@@ -1,23 +1,21 @@
 #include <Arduino.h>
-#include "FreeRTOS.h"
-#if defined(ARDUINO_SAMD_FEATHER_M0) || defined(NRF52)
-extern "C" void delay(uint32_t);
-static inline void _delay_ms(uint32_t m) {
-  delay(m);
-}
-#else
-#include <util/delay.h>
-#endif
+#include "src/libs/tasks/Tasks.h"
 
 #ifndef PIN_LED
 #define PIN_LED LED_BUILTIN
 #endif
 
-void setup(void) {}
+clacker::Task<> blinker([] {
+  while (true) {
+    digitalWrite(PIN_LED, true);
+    vTaskDelay(300 / portTICK_PERIOD_MS);
+    digitalWrite(PIN_LED, false);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
+  }
+});
 
-void loop(void) {
-  digitalWrite(PIN_LED, true);
-  _delay_ms(300);
-  digitalWrite(PIN_LED, false);
-  _delay_ms(200);
+void setup(void) {
+  blinker.start();
 }
+
+void loop(void) {}

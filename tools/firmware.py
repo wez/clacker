@@ -6,6 +6,7 @@ import os
 from . import targets
 from . import board
 from . import library
+from . import projectdir
 
 
 def mkdir_p(d):
@@ -77,7 +78,8 @@ class Firmware(targets.Target):
             if check_depfile(ofile, depfile):
                 print('%s from %s' % (ofile, s))
 
-                cppflags = ' '.join(lib.get_cppflags_for_compile(self.board))
+                cppflags = ' '.join(lib.get_cppflags_for_compile(self.board) + [
+                    '-I%s' % projectdir.Root])
 
                 self.board.compile_src(s, ofile, depfile, cppflags)
             objs.append(ofile)
