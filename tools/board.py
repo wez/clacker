@@ -73,7 +73,25 @@ class FQBN(Board):
             lib = make_lib(name, key)
             if lib:
                 libs.append(lib)
+
         return libs
+
+    def _cmd_split(self, args):
+        ''' hoop jumping to make sure that -D options from the
+            recipes can successfully be used to define quoted
+            string '''
+        args = shlex.split(args, posix=False)
+
+        def dequote(s):
+            ''' Remove single or double quotes from an argument,
+                but only if they surround the string '''
+            if s.startswith('"') and s.endswith('"'):
+                return s[1:-1]
+            if s.startswith("'") and s.endswith("'"):
+                return s[1:-1]
+            return s
+
+        return [dequote(s) for s in args]
 
     def compile_src(self, srcfile, objfile, depfile=None, cppflags=None):
         a = arduino.get()
@@ -97,10 +115,10 @@ class FQBN(Board):
         if ext == '.s':
             ext = '.S'
 
-        cmd = a.resolve_pref('recipe%s.o.pattern' % ext, prefs)
-
+        cmd = self._cmd_split(a.resolve_pref(
+            'recipe%s.o.pattern' % ext, prefs))
         print(cmd)
-        subprocess.check_call(shlex.split(cmd))
+        subprocess.check_call(cmd)
 
     def link_exe(self, exefile, objfiles):
         a = arduino.get()
@@ -115,9 +133,10 @@ class FQBN(Board):
         prefs['archive_file'] = os.path.relpath(objfiles[-1], build_dir)
         prefs['object_files'] = ' '.join(objfiles[0:-1])
 
-        cmd = a.resolve_pref('recipe.c.combine.pattern', prefs)
-        # pprint(shlex.split(cmd))
-        subprocess.check_call(shlex.split(cmd))
+        cmd = self._cmd_split(a.resolve_pref(
+            'recipe.c.combine.pattern', prefs))
+        # pprint(cmd)
+        subprocess.check_call(cmd)
 
     def exe_to_hex(self, exefile, hexfile):
         a = arduino.get()
@@ -130,6 +149,7 @@ class FQBN(Board):
         prefs['build.path'] = build_dir
         prefs['build.project_name'] = os.path.basename(exefile)
 
-        cmd = a.resolve_pref('recipe.objcopy.hex.pattern', prefs)
+        cmd = self._cmd_split(a.resolve_pref(
+            'recipe.objcopy.hex.pattern', prefs))
         print(cmd)
-        subprocess.check_call(shlex.split(cmd))
+        subprocess.check_call(cmd)

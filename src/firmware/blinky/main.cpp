@@ -1,5 +1,6 @@
 #include <Arduino.h>
-#ifdef ARDUINO_SAMD_FEATHER_M0
+#include "FreeRTOS.h"
+#if defined(ARDUINO_SAMD_FEATHER_M0) || defined(NRF52)
 extern "C" void delay(uint32_t);
 static inline void _delay_ms(uint32_t m) {
   delay(m);

@@ -15,3 +15,9 @@ Firmware(
     board=FQBN('adafruit:samd:adafruit_feather_m0'),
     deps=['src/libs/freertos:freertos'],
     srcs=['main.cpp'])
+
+Firmware(
+    name='nrf52',
+    board=FQBN('adafruit:nrf52:feather52:debug=l0'),
+    deps=['src/libs/freertos:freertos'],
+    srcs=['main.cpp'])
