@@ -124,6 +124,8 @@ class Arduino(object):
                         key = k
                         break
                 if not key:
+                    import pprint
+                    pprint.pprint(prefs)
                     raise Exception(
                         'could not resolve prefs from %s (key %s)' % (value, m.group(1)))
 

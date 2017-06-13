@@ -4,6 +4,7 @@
 from . import projectdir
 import os
 import sys
+from glob import glob
 
 Targets = {}
 

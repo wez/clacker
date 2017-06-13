@@ -12,12 +12,17 @@ def find_sources(dir):
 
     for d, dirs, files in os.walk(dir):
         for f in files:
+            full = os.path.join(d, f)
+            if '.git' in full:
+                # Don't pull in external git repo code
+                continue
+
             _, ext = os.path.splitext(f)
 
             if ext in ['.c', '.cpp', '.h', '.hpp', '.ino']:
-                cpp.append(os.path.join(d, f))
+                cpp.append(full)
             elif ext == '.py':
-                py.append(os.path.join(d, f))
+                py.append(full)
 
     return {
         'py': py,

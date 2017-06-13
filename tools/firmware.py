@@ -30,7 +30,38 @@ class Firmware(targets.Target):
     def _build_library(self, lib, outputs):
         print('Build library %s' % lib.full_name)
 
-        srcs = lib.srcs
+        def check_depfile(objfile, depfile):
+            ''' reads a makefile compatible dependency file.
+                Returns True if the object needs to be compiled,
+                False if it is up to date. '''
+            try:
+                obj_stat = os.lstat(objfile)
+            except:
+                # doesn't exist, so compile it
+                return True
+
+            if not os.path.exists(depfile):
+                return True  # needs recompile
+
+            with open(depfile, 'r') as f:
+                lines = f.readlines()
+                # The first line is our own object, the rest are the deps
+                for depline in lines[1:]:
+                    dep = depline.strip().rstrip('\\').strip()
+
+                    try:
+                        dep_stat = os.lstat(dep)
+                        if dep_stat.st_mtime > obj_stat.st_mtime:
+                            # It changed more recently, so recompile
+                            return True
+                    except:
+                        # It doesn't exist, so recompile
+                        return True
+
+            # Up to date!
+            return False
+
+        srcs = lib.get_srcs(self.board)
         objs = []
 
         for s in srcs:
@@ -43,8 +74,12 @@ class Firmware(targets.Target):
 
             mkdir_p(os.path.dirname(ofile))
 
-            print('%s from %s' % (ofile, s))
-            self.board.compile_src(s, ofile, depfile, lib.cppflags)
+            if check_depfile(ofile, depfile):
+                print('%s from %s' % (ofile, s))
+
+                cppflags = ' '.join(lib.get_cppflags_for_compile(self.board))
+
+                self.board.compile_src(s, ofile, depfile, cppflags)
             objs.append(ofile)
 
         return objs

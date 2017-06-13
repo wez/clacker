@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import glob
+from pprint import pprint
+from glob import glob
 import os
 import subprocess
 import shlex
@@ -41,12 +42,54 @@ class FQBN(Board):
         self.fqbn = fqbn
         self.prefs = prefs or {}
 
+    def injected_deps(self):
+        ''' Inject the core and variant libraries as dependencies when
+            we compile with this board '''
+        a = arduino.get()
+
+        prefs = a.board_prefs(self.fqbn)
+        prefs.update(self.prefs)
+
+        def make_lib(name, key):
+            ''' collect all the c/cpp sources recursively under a dir
+                and synthesize it into a library '''
+            path = a.resolve_pref(key, prefs)
+            if not path:
+                ''' eg: teensy doesn't have a build.variant.path '''
+                return None
+            projectdir.set(path)
+            srcs = []
+            for d, _, files in os.walk(path):
+                for f in files:
+                    _, ext = os.path.splitext(f)
+                    if ext == '.c' or ext == '.cpp':
+                        srcs.append(os.path.join(d, f))
+            return library.Library(name=name, srcs=srcs)
+
+        libs = []
+        for name, key in [
+                ('core', 'build.core.path'),
+                ('variant', 'build.variant.path')]:
+            lib = make_lib(name, key)
+            if lib:
+                libs.append(lib)
+        return libs
+
     def compile_src(self, srcfile, objfile, depfile=None, cppflags=None):
         a = arduino.get()
 
         prefs = a.board_prefs(self.fqbn)
         prefs.update(self.prefs)
-        prefs['includes'] = '%s -I{build.core.path}' % (cppflags or '')
+
+        flags = [cppflags or '']
+        core_path = a.resolve_pref('build.core.path', prefs)
+        if core_path:
+            flags.append('-I%s' % core_path)
+        variant_path = a.resolve_pref('build.variant.path', prefs)
+        if variant_path:
+            flags.append('-I%s' % variant_path)
+
+        prefs['includes'] = ' '.join(flags)
         prefs['source_file'] = srcfile
         prefs['object_file'] = objfile
 
@@ -73,7 +116,7 @@ class FQBN(Board):
         prefs['object_files'] = ' '.join(objfiles[0:-1])
 
         cmd = a.resolve_pref('recipe.c.combine.pattern', prefs)
-        print(cmd)
+        # pprint(shlex.split(cmd))
         subprocess.check_call(shlex.split(cmd))
 
     def exe_to_hex(self, exefile, hexfile):

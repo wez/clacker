@@ -1,19 +1,22 @@
-#include <avr/io.h>
-#include <avr/pgmspace.h>
+#include <Arduino.h>
+#ifdef ARDUINO_SAMD_FEATHER_M0
+extern "C" void delay(uint32_t);
+static inline void _delay_ms(uint32_t m) {
+  delay(m);
+}
+#else
 #include <util/delay.h>
+#endif
 
-#define LED_ON (PORTD |= (1 << 6))
-#define LED_OFF (PORTD &= ~(1 << 6))
-#define LED_CONFIG (DDRD |= (1 << 6))
+#ifndef PIN_LED
+#define PIN_LED LED_BUILTIN
+#endif
 
-int main(void) {
-  LED_CONFIG;
-  LED_OFF;
+void setup(void) {}
 
-  while (1) {
-    LED_ON;
-    _delay_ms(300);
-    LED_OFF;
-    _delay_ms(200);
-  }
+void loop(void) {
+  digitalWrite(PIN_LED, true);
+  _delay_ms(300);
+  digitalWrite(PIN_LED, false);
+  _delay_ms(200);
 }

@@ -14,7 +14,24 @@ class Library(targets.Target):
         super(Library, self).__init__(name)
         self.srcs = self._normalize_srcs(srcs)
         self.deps = deps or []
-        self.cppflags = cppflags
+        self.cppflags = cppflags or []
 
     def get_deps(self):
         return self.deps
+
+    def get_srcs(self, board):
+        return self.srcs
+
+    def get_cppflags(self, board):
+        return self.cppflags
+
+    def get_scoped_cppflags(self, board):
+        return []
+
+    def get_cppflags_for_compile(self, board):
+        flags = self.get_scoped_cppflags(board) + self.get_cppflags(board)
+
+        for d in self._expand_deps():
+            flags += d.get_cppflags(board)
+
+        return flags
