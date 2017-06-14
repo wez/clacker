@@ -16,17 +16,32 @@ from tools import (
 )
 
 
+def list_firmware():
+    return [f for f in targets.Targets.values() if isinstance(f, firmware.Firmware)]
+
+
 def do_build(args):
-    f = targets.Targets.get(args.firmware)
-    if not isinstance(f, firmware.Firmware):
-        sys.stderr.write('%s is not a firmware target\n' % args.build)
-        sys.exit(1)
-    f.build()
-    return f
+    if args.firmware:
+        to_build = [targets.Targets.get(name) for name in args.firmware]
+
+        for f in to_build:
+            if not isinstance(f, firmware.Firmware):
+                sys.stderr.write('%s is not a firmware target\n' % f.full_name)
+                sys.exit(1)
+
+    else:
+        to_build = list_firmware()
+
+    for f in to_build:
+        f.build()
 
 
 def do_upload(args):
-    f = do_build(args)
+    f = targets.Targets.get(args.firmware)
+    if not isinstance(f, firmware.Firmware):
+        sys.stderr.write('%s is not a firmware target\n' % f.full_name)
+        sys.exit(1)
+    f.build()
     f.upload(args.port)
 
 
@@ -35,8 +50,7 @@ def do_tidy(args):
 
 
 def do_list(args):
-    avail = [f for f in targets.Targets.values()
-             if isinstance(f, firmware.Firmware)]
+    avail = list_firmware()
     print('\n'.join(sorted([f.full_name for f in avail])))
 
 
@@ -53,8 +67,12 @@ subparsers = parser.add_subparsers(
 build_parser = subparsers.add_parser('build', help='Build firmware',
                                      description='''
     Builds the source code for the specified firmware.
+    If no firmware is specified, builds all of them.
+    You may run `clacker.py list-firmware` to see a list of
+    firmware projects that can be passed to the build command.
     ''')
-build_parser.add_argument('firmware', help='which firmware to build')
+build_parser.add_argument(
+    'firmware', help='which firmware to build', nargs='*')
 build_parser.set_defaults(func=do_build)
 
 upload_parser = subparsers.add_parser('upload',
