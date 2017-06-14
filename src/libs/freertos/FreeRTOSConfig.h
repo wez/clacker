@@ -10,6 +10,11 @@
 #define portPOINTER_SIZE_TYPE uint32_t
 #define configTICK_RATE_HZ 1000
 #define configUSE_16_BIT_TICKS 0
+#elif defined(__x86_64__)
+#define configMINIMAL_STACK_SIZE 100U
+#define portPOINTER_SIZE_TYPE uint64_t
+#define configTICK_RATE_HZ 1000
+#define configUSE_16_BIT_TICKS 0
 #endif
 
 #define configUSE_PREEMPTION 1

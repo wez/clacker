@@ -35,9 +35,9 @@ class Task {
 
   void start() {
 #if configSUPPORT_STATIC_ALLOCATION == 1
-    t_ = xTaskCreateStatic(run, 0, StackSize, this, Priority, stack_, &tBuf_);
+    t_ = xTaskCreateStatic(run, "", StackSize, this, Priority, stack_, &tBuf_);
 #else
-    xTaskCreate(run, 0, StackSize, this, Priority, &t_);
+    xTaskCreate(run, "", StackSize, this, Priority, &t_);
 #endif
   }
 };

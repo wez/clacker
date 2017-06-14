@@ -21,3 +21,9 @@ Firmware(
     board=FQBN('adafruit:nrf52:feather52:debug=l0'),
     deps=['src/libs/tasks:tasks'],
     srcs=['main.cpp'])
+
+Firmware(
+    name='host',
+    board=HostCompiler(),
+    deps=['src/libs/tasks:tasks'],
+    srcs=['main.cpp'])

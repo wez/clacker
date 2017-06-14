@@ -72,11 +72,19 @@ class HostCompiler(Board):
 
     def compile_src(self, srcfile, objfile, depfile=None, cppflags=None):
         cppflags = cppflags or ''
-        subprocess.check_call(
-            ['g++', '-c', '-std=c++11', '-MMD', '-o', objfile, srcfile] + _cmd_split(cppflags))
+        if srcfile.endswith('.cpp'):
+            subprocess.check_call(
+                ['g++', '-g', '-c', '-std=c++11', '-MMD', '-o', objfile, srcfile] + _cmd_split(cppflags))
+        else:
+            subprocess.check_call(
+                ['gcc', '-g', '-c', '-MMD', '-o', objfile, srcfile] + _cmd_split(cppflags))
 
     def link_exe(self, exefile, objfiles):
         subprocess.check_call(['g++', '-o', exefile] + objfiles)
+        print('OK: %s' % exefile)
+
+    def link_lib(self, libfile, objfiles):
+        subprocess.check_call(['ar', 'rcs', libfile] + objfiles)
 
     def exe_to_hex(self, exefile, hexfile):
         pass

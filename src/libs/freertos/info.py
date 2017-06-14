@@ -21,6 +21,8 @@ class FreeRTOS(Library):
             return 'avr'
         if 'nrf52' in board.fqbn:
             return 'nrf52'
+        if board.fqbn == 'host':
+            return 'posix'
         raise Exception("what arch for %s" % board.fqbn)
 
     def get_srcs(self, board):
@@ -42,11 +44,7 @@ class FreeRTOS(Library):
         else:
             core = glob('%s/FreeRTOS/Source/*.c' % upstream)
 
-            if arch == 'avr':
-                port.append('%s/avr/port.c' % self.dir)
-            elif arch == 'm0':
-                port.append('%s/m0/port.c' % self.dir)
-
+            port += glob('%s/%s/*.c' % (self.dir, arch))
             port += glob('%s/*.c' % self.dir)
 
         return core + port
@@ -61,10 +59,7 @@ class FreeRTOS(Library):
                 '-I%s' % os.path.join(upstream, 'FreeRTOS/Source/include'),
                 '-I%s' % self.dir,
             ]
-            if arch == 'avr':
-                flags.append('-I%s/avr' % self.dir)
-            elif arch == 'm0':
-                flags.append('-I%s/m0' % self.dir)
+            flags.append('-I%s/%s' % (self.dir, arch))
 
         return flags
 
