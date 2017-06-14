@@ -17,6 +17,9 @@ def find_sources(dir):
                 # Don't pull in external git repo code
                 continue
 
+            if 'src/testing/lest' in full:
+                continue
+
             _, ext = os.path.splitext(f)
 
             if ext in ['.c', '.cpp', '.h', '.hpp', '.ino']:

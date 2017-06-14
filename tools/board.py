@@ -13,6 +13,24 @@ from . import library
 from . import projectdir
 
 
+def _cmd_split(args):
+    ''' hoop jumping to make sure that -D options from the
+        recipes can successfully be used to define quoted
+        string '''
+    args = shlex.split(args, posix=False)
+
+    def dequote(s):
+        ''' Remove single or double quotes from an argument,
+            but only if they surround the string '''
+        if s.startswith('"') and s.endswith('"'):
+            return s[1:-1]
+        if s.startswith("'") and s.endswith("'"):
+            return s[1:-1]
+        return s
+
+    return [dequote(s) for s in args]
+
+
 class Board(object):
     ''' Defines a board that we can deploy code to '''
 
@@ -43,6 +61,25 @@ class Board(object):
     def upload(self, hexfile, port=None):
         ''' Upload the specified image to the device '''
         raise NotImplementedError()
+
+
+class HostCompiler(Board):
+    ''' Placeholder for when we build unit tests with the host
+        compiler '''
+
+    def __init__(self):
+        self.fqbn = 'host'
+
+    def compile_src(self, srcfile, objfile, depfile=None, cppflags=None):
+        cppflags = cppflags or ''
+        subprocess.check_call(
+            ['g++', '-c', '-std=c++11', '-MMD', '-o', objfile, srcfile] + _cmd_split(cppflags))
+
+    def link_exe(self, exefile, objfiles):
+        subprocess.check_call(['g++', '-o', exefile] + objfiles)
+
+    def exe_to_hex(self, exefile, hexfile):
+        pass
 
 
 class FQBN(Board):
@@ -85,23 +122,6 @@ class FQBN(Board):
 
         return libs
 
-    def _cmd_split(self, args):
-        ''' hoop jumping to make sure that -D options from the
-            recipes can successfully be used to define quoted
-            string '''
-        args = shlex.split(args, posix=False)
-
-        def dequote(s):
-            ''' Remove single or double quotes from an argument,
-                but only if they surround the string '''
-            if s.startswith('"') and s.endswith('"'):
-                return s[1:-1]
-            if s.startswith("'") and s.endswith("'"):
-                return s[1:-1]
-            return s
-
-        return [dequote(s) for s in args]
-
     def compile_src(self, srcfile, objfile, depfile=None, cppflags=None):
         a = arduino.get()
 
@@ -124,7 +144,7 @@ class FQBN(Board):
         if ext == '.s':
             ext = '.S'
 
-        cmd = self._cmd_split(a.resolve_pref(
+        cmd = _cmd_split(a.resolve_pref(
             'recipe%s.o.pattern' % ext, prefs))
         # print(cmd)
         subprocess.check_call(cmd)
@@ -155,7 +175,7 @@ class FQBN(Board):
 
         for obj in objfiles:
             prefs['object_file'] = obj
-            cmd = self._cmd_split(a.resolve_pref(
+            cmd = _cmd_split(a.resolve_pref(
                 'recipe.ar.pattern', prefs))
             # pprint(cmd)
             subprocess.check_call(cmd)
@@ -173,7 +193,7 @@ class FQBN(Board):
         prefs['archive_file'] = os.path.relpath(objfiles[-1], build_dir)
         prefs['object_files'] = ' '.join(objfiles[0:-1])
 
-        cmd = self._cmd_split(a.resolve_pref(
+        cmd = _cmd_split(a.resolve_pref(
             'recipe.c.combine.pattern', prefs))
         # pprint(cmd)
         subprocess.check_call(cmd)
@@ -191,7 +211,7 @@ class FQBN(Board):
 
         for obj in ('hex', 'bin', 'zip'):
             try:
-                cmd = self._cmd_split(a.resolve_pref(
+                cmd = _cmd_split(a.resolve_pref(
                     'recipe.objcopy.%s.pattern' % obj, prefs))
                 print(cmd)
                 subprocess.check_call(cmd)
@@ -277,7 +297,7 @@ class FQBN(Board):
                     continue
 
             cmd = a.resolve_pref('%s.upload.pattern' % key, prefs)
-            cmd = self._cmd_split(cmd)
+            cmd = _cmd_split(cmd)
             pprint(cmd)
 
             time.sleep(1)

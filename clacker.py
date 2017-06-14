@@ -12,12 +12,17 @@ from tools import (
     firmware,
     projectdir,
     targets,
-    tidy
+    tidy,
+    test,
 )
 
 
 def list_firmware():
     return [f for f in targets.Targets.values() if isinstance(f, firmware.Firmware)]
+
+
+def list_tests():
+    return [f for f in targets.Targets.values() if isinstance(f, test.UnitTest)]
 
 
 def do_build(args):
@@ -52,6 +57,28 @@ def do_tidy(args):
 def do_list(args):
     avail = list_firmware()
     print('\n'.join(sorted([f.full_name for f in avail])))
+
+
+def do_list_test(args):
+    avail = list_tests()
+    print('\n'.join(sorted([f.full_name for f in avail])))
+
+
+def do_tests(args):
+    if args.test:
+        to_build = [targets.Targets.get(name) for name in args.test]
+
+        for f in to_build:
+            if not isinstance(f, test.UnitTest):
+                sys.stderr.write('%s is not a test target\n' % f.full_name)
+                sys.exit(1)
+
+    else:
+        to_build = list_tests()
+
+    for f in to_build:
+        f.build()
+        f.run_tests()
 
 
 projectdir.Root = os.path.realpath(os.path.dirname(__file__))
@@ -100,6 +127,26 @@ list_parser = subparsers.add_parser('list-firmware',
     throughout this source tree.
     ''')
 list_parser.set_defaults(func=do_list)
+
+list_test_parser = subparsers.add_parser('list-tests',
+                                         help='List tests',
+                                         description='''
+    Shows a list of all available tests.
+    These are defined by UnitTest objects in the info.py files found
+    throughout this source tree.
+    ''')
+list_test_parser.set_defaults(func=do_list_test)
+
+run_test_parser = subparsers.add_parser('test', help='Run tests',
+                                        description='''
+    Builds and run tests.
+    If no tests are specified, builds all of them.
+    You may run `clacker.py list-tests` to see a list of
+    tests that can be passed to the test command.
+    ''')
+run_test_parser.add_argument(
+    'test', help='which tests to build and run', nargs='*')
+run_test_parser.set_defaults(func=do_tests)
 
 args = parser.parse_args()
 args.func(args)

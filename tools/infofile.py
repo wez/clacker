@@ -7,7 +7,8 @@ from . import (
     board,
     firmware,
     library,
-    projectdir
+    projectdir,
+    test
 )
 
 
@@ -33,5 +34,6 @@ def load_info_file(filename):
         export(firmware, g)
         export(library, g)
         export(board, g)
+        export(test, g)
 
         eval(code, g)

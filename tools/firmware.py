@@ -14,11 +14,11 @@ def mkdir_p(d):
         os.makedirs(d)
 
 
-class Firmware(targets.Target):
-    ''' Compile code into a firmware image '''
+class Linkable(targets.Target):
+    ''' Base class for building an executable target '''
 
     def __init__(self, name, board=None, srcs=None, deps=None, cppflags=None):
-        super(Firmware, self).__init__(name)
+        super(Linkable, self).__init__(name)
         self.board = board
         self.lib = library.Library('%s-lib' % name,
                                    srcs=srcs,
@@ -128,6 +128,10 @@ class Firmware(targets.Target):
 
         hex = os.path.join(outputs, '%s.hex' % self.name)
         self.board.exe_to_hex(exe, hex)
+
+
+class Firmware(Linkable):
+    ''' Compile code into a firmware image '''
 
     def upload(self, port=None):
         outputs = os.path.realpath(
