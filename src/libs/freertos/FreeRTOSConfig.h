@@ -1,7 +1,6 @@
 #pragma once
 #ifdef __AVR__
 #include <avr/io.h>
-//#define pdMS_TO_TICKS(xTimeInMs) (xTimeInMs / portTICK_PERIOD_MS)
 #define configMINIMAL_STACK_SIZE 85U
 #define portPOINTER_SIZE_TYPE uint16_t
 #define configTICK_RATE_HZ 66

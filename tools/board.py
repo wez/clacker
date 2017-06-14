@@ -26,6 +26,11 @@ class Board(object):
             the result into exefile '''
         raise NotImplementedError()
 
+    def link_lib(self, libfile, objfiles):
+        ''' link a set of objects together and store
+            the result into libfile '''
+        raise NotImplementedError()
+
     def exe_to_hex(self, exefile, hexfile):
         ''' transform an executable into a hex image '''
         raise NotImplementedError()
@@ -55,29 +60,28 @@ class FQBN(Board):
         prefs = a.board_prefs(self.fqbn)
         prefs.update(self.prefs)
 
-        def make_lib(name, key):
+        srcs = []
+
+        def find_srcs(path):
             ''' collect all the c/cpp sources recursively under a dir
                 and synthesize it into a library '''
-            path = a.resolve_pref(key, prefs)
-            if not path:
-                ''' eg: teensy doesn't have a build.variant.path '''
-                return None
-            projectdir.set(path)
             srcs = []
             for d, _, files in os.walk(path):
                 for f in files:
                     _, ext = os.path.splitext(f)
-                    if ext == '.c' or ext == '.cpp':
+                    if ext == '.c' or ext == '.cpp' or ext == '.S':
                         srcs.append(os.path.join(d, f))
-            return library.Library(name=name, srcs=srcs)
+            return srcs
 
         libs = []
-        for name, key in [
-                ('core', 'build.core.path'),
-                ('variant', 'build.variant.path')]:
-            lib = make_lib(name, key)
-            if lib:
-                libs.append(lib)
+        core_path = a.resolve_pref('build.core.path', prefs)
+        srcs += find_srcs(core_path)
+        variant_path = a.resolve_pref('build.variant.path', prefs)
+        if variant_path:
+            srcs += find_srcs(variant_path)
+
+        projectdir.set(core_path)
+        libs.append(library.Library(name='core', srcs=srcs))
 
         return libs
 
@@ -122,8 +126,39 @@ class FQBN(Board):
 
         cmd = self._cmd_split(a.resolve_pref(
             'recipe%s.o.pattern' % ext, prefs))
-        print(cmd)
+        # print(cmd)
         subprocess.check_call(cmd)
+
+    def link_lib(self, libfile, objfiles):
+        ''' link a set of objects together and store
+            the result into libfile '''
+
+        # Remove the library first, as we may have removed an input
+        # object file and we don't want to allow that to mess with
+        # linking later on
+        if os.path.exists(libfile):
+            os.unlink(libfile)
+
+        a = arduino.get()
+
+        prefs = a.board_prefs(self.fqbn)
+        prefs.update(self.prefs)
+        # pprint(prefs)
+        build_dir = os.path.dirname(libfile)
+        prefs['build.path'] = build_dir
+        prefs['archive_file'] = libfile
+        prefs['archive_file_path'] = libfile
+
+        # fixup what looks like a bogus config for teensy
+        prefs['recipe.ar.pattern'] = prefs['recipe.ar.pattern'].replace(
+            '{build.path}/core/{archive_file}', '{archive_file_path}')
+
+        for obj in objfiles:
+            prefs['object_file'] = obj
+            cmd = self._cmd_split(a.resolve_pref(
+                'recipe.ar.pattern', prefs))
+            # pprint(cmd)
+            subprocess.check_call(cmd)
 
     def link_exe(self, exefile, objfiles):
         a = arduino.get()
@@ -154,19 +189,14 @@ class FQBN(Board):
         prefs['build.path'] = build_dir
         prefs['build.project_name'] = os.path.basename(exefile)
 
-        cmd = self._cmd_split(a.resolve_pref(
-            'recipe.objcopy.hex.pattern', prefs))
-        print(cmd)
-        subprocess.check_call(cmd)
-
-        try:
-            # We may also need to make a .bin file
-            cmd = self._cmd_split(a.resolve_pref(
-                'recipe.objcopy.bin.pattern', prefs))
-            print(cmd)
-            subprocess.check_call(cmd)
-        except:
-            pass
+        for obj in ('hex', 'bin', 'zip'):
+            try:
+                cmd = self._cmd_split(a.resolve_pref(
+                    'recipe.objcopy.%s.pattern' % obj, prefs))
+                print(cmd)
+                subprocess.check_call(cmd)
+            except:
+                pass
 
     def upload(self, hexfile, port=None):
         a = arduino.get()
@@ -211,10 +241,6 @@ class FQBN(Board):
         prefs['upload.verbose'] = '{%s.upload.params.verbose}' % key \
             if verbose \
             else '{%s.upload.params.quiet}' % key
-
-        if verbose:
-            print('Dict for flashing')
-            pprint(prefs)
 
         try:
             pref_serial_port = a.resolve_pref('serial.port', prefs)

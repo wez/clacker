@@ -8,15 +8,17 @@
 clacker::Task<> blinker([] {
   while (true) {
     digitalWrite(PIN_LED, !digitalRead(PIN_LED));
-    vTaskDelay(300 / portTICK_PERIOD_MS);
+    clacker::delayMilliseconds(300);
   }
 });
 
 void setup(void) {
   pinMode(PIN_LED, OUTPUT);
-  digitalWrite(PIN_LED, true);
   blinker.start();
+#ifndef NRF52
+  // NRF52 already started the scheduler
   vTaskStartScheduler();
+#endif
 }
 
 void loop(void) {}

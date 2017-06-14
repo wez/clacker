@@ -23,7 +23,8 @@ class Firmware(targets.Target):
         self.lib = library.Library('%s-lib' % name,
                                    srcs=srcs,
                                    deps=deps,
-                                   cppflags=cppflags)
+                                   cppflags=cppflags,
+                                   no_dot_a=True)
 
     def get_deps(self):
         return [self.lib]
@@ -65,6 +66,10 @@ class Firmware(targets.Target):
         srcs = lib.get_srcs(self.board)
         objs = []
 
+        libname = os.path.join(outputs, lib.full_name.replace(':', '/')) + '.a'
+        mkdir_p(os.path.dirname(libname))
+        print('Should make lib %s' % libname)
+
         for s in srcs:
             name, ext = os.path.splitext(s)
             if os.path.isabs(name):
@@ -82,9 +87,15 @@ class Firmware(targets.Target):
                     '-I%s' % projectdir.Root])
 
                 self.board.compile_src(s, ofile, depfile, cppflags)
+
             objs.append(ofile)
 
-        return objs
+        if not objs or lib.no_dot_a:
+            # Nothing to link; header only library
+            return objs
+
+        self.board.link_lib(libname, objs)
+        return [libname]
 
     def build(self):
         print('Build %s' % self.full_name)
@@ -98,16 +109,22 @@ class Firmware(targets.Target):
 
         deps = self._expand_deps() + self.board.injected_deps()
 
-        to_link = []
+        objs = []
+        libs = []
         for d in deps:
             if not isinstance(d, library.Library):
                 raise Exception(
                     "Don't know how to build %r" % d)
 
-            to_link += self._build_library(d, outputs)
+            for obj in self._build_library(d, outputs):
+                _, ext = os.path.splitext(obj)
+                if ext == '.a':
+                    libs.insert(0, obj)
+                else:
+                    objs.append(obj)
 
         exe = os.path.join(outputs, '%s.elf' % self.name)
-        self.board.link_exe(exe, to_link)
+        self.board.link_exe(exe, objs + libs)
 
         hex = os.path.join(outputs, '%s.hex' % self.name)
         self.board.exe_to_hex(exe, hex)
