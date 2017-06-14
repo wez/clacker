@@ -159,6 +159,15 @@ class FQBN(Board):
         print(cmd)
         subprocess.check_call(cmd)
 
+        try:
+            # We may also need to make a .bin file
+            cmd = self._cmd_split(a.resolve_pref(
+                'recipe.objcopy.bin.pattern', prefs))
+            print(cmd)
+            subprocess.check_call(cmd)
+        except:
+            pass
+
     def upload(self, hexfile, port=None):
         a = arduino.get()
         prefs = a.board_prefs(self.fqbn)
@@ -191,12 +200,11 @@ class FQBN(Board):
             },
         }
 
-        if tool not in params:
-            pprint(prefs)
-            print("I don't know how to upload using %s" % tool)
-            return
-
-        params = params[tool]
+        params = params.get(tool, {
+            'key': 'tools.%s' % tool,
+            'need_port': True,
+            'port_glob': '/dev/cu.*',
+        })
         key = params['key']
 
         verbose = True
@@ -231,6 +239,7 @@ class FQBN(Board):
 
                 if device:
                     prefs['serial.port'] = device
+                    prefs['serial.port.file'] = device
 
                 if device:
                     # try to persuade the device to jump to the bootloader

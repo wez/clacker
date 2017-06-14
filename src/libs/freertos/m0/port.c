@@ -73,7 +73,11 @@
 
 /* Scheduler includes. */
 #include "FreeRTOS.h"
+#ifdef ARDUINO_ARCH_SAMD
+#include "sam.h"
+#else
 #include "kinetis.h"
+#endif
 #include "task.h"
 
 /* Constants required to manipulate the NVIC. */
@@ -518,6 +522,17 @@ void xPortSysTickHandler(void) {
 }
 /*-----------------------------------------------------------*/
 
+#ifdef ARDUINO_ARCH_SAMD
+void PendSV_Handler(void) __attribute__((alias("xPortPendSVHandler")));
+int sysTickHook(void) {
+  if (orig_tick_handler) {
+    xPortSysTickHandler();
+    return 1;
+  }
+  return 0;
+}
+#endif
+
 /*
  * Setup the systick timer to generate the tick interrupts at the required
  * frequency.
@@ -527,14 +542,19 @@ void prvSetupTimerInterrupt(void) {
   *(portNVIC_SYSTICK_CTRL) = 0UL;
   *(portNVIC_SYSTICK_CURRENT_VALUE) = 0UL;
 
-  // With the ticks turned off, co-opt the tick ISR
+#ifdef ARDUINO_ARCH_SAMD
+  extern void SysTick_DefaultHandler(void);
+  orig_tick_handler = SysTick_DefaultHandler;
+#else
   typedef void (*isr_func)(void);
   isr_func* vectors = (isr_func*)SCB_VTOR;
 
+  // Intercept the tick ISR; we make a copy of the current ISR so that
+  // we can call it and keep the arduino tick handler running
   orig_tick_handler = vectors[15];
   vectors[15] = xPortSysTickHandler;
-
   vectors[14] = xPortPendSVHandler;
+#endif
 
   /* Configure SysTick to interrupt at the requested rate. */
   *(portNVIC_SYSTICK_LOAD) = (configCPU_CLOCK_HZ / configTICK_RATE_HZ) - 1UL;

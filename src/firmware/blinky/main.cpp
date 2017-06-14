@@ -14,6 +14,7 @@ clacker::Task<> blinker([] {
 
 void setup(void) {
   pinMode(PIN_LED, OUTPUT);
+  digitalWrite(PIN_LED, true);
   blinker.start();
   vTaskStartScheduler();
 }
