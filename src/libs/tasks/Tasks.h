@@ -2,21 +2,16 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+// This function is provided by the firmware project to launch
+// the tasks that will be run by the firmware.  It logically
+// replaces the use of main(), setup() and loop().
+// When this function returns, the scheduler will be started.
+extern "C" void launchTasks(void);
+
 namespace clacker {
 
-TickType_t millisecondsToTicks(uint32_t ms) {
-#ifdef ms2tick
-  // The NRF52 port provides this macro
-  return ms2tick(ms);
-#else
-  // Otherwise, just use a simple integer division
-  return ms / portTICK_PERIOD_MS;
-#endif
-}
-
-void delayMilliseconds(uint32_t ms) {
-  vTaskDelay(millisecondsToTicks(ms));
-}
+TickType_t millisecondsToTicks(uint32_t ms);
+void delayMilliseconds(uint32_t ms);
 
 template <uint32_t StackSize = configMINIMAL_STACK_SIZE, uint8_t Priority = 2>
 class Task {

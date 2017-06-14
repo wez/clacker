@@ -12,13 +12,7 @@ clacker::Task<> blinker([] {
   }
 });
 
-void setup(void) {
+void launchTasks(void) {
   pinMode(PIN_LED, OUTPUT);
   blinker.start();
-#ifndef NRF52
-  // NRF52 already started the scheduler
-  vTaskStartScheduler();
-#endif
 }
-
-void loop(void) {}
