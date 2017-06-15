@@ -4,6 +4,7 @@ from __future__ import print_function
 from pprint import pprint
 from glob import glob
 import os
+import re
 import subprocess
 import shlex
 import time
@@ -217,14 +218,45 @@ class FQBN(Board):
         prefs['build.path'] = build_dir
         prefs['build.project_name'] = os.path.basename(exefile)
 
+        def size():
+            cmd = a.resolve_pref('recipe.size.pattern', prefs)
+            try:
+                output = subprocess.check_output(_cmd_split(cmd))
+
+                size_re = a.resolve_pref('recipe.size.regex', prefs)
+                data_re = a.resolve_pref('recipe.size.regex.data', prefs)
+                eeprom_re = a.resolve_pref('recipe.size.regex.eeprom', prefs)
+                data = 0
+                eeprom = 0
+                size = 0
+                for line in output.split('\n'):
+                    m = re.search(size_re, line)
+                    if m:
+                        size += int(m.group(1))
+                    m = re.search(data_re, line)
+                    if m:
+                        data += int(m.group(1))
+                    m = re.search(eeprom_re, line)
+                    if m:
+                        eeprom_re += int(m.group(1))
+
+                return {
+                    'size': size,
+                    'data': data,
+                    'eeprom': eeprom,
+                }
+            except:
+                return None
+
         for obj in ('hex', 'bin', 'zip'):
             try:
                 cmd = _cmd_split(a.resolve_pref(
                     'recipe.objcopy.%s.pattern' % obj, prefs))
-                print(cmd)
                 subprocess.check_call(cmd)
             except:
                 pass
+
+        print('%s: %r' % (hexfile, size()))
 
     def upload(self, hexfile, port=None):
         a = arduino.get()
