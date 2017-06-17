@@ -13,8 +13,8 @@ namespace clacker {
 // Returns a copy of T from the specified progMem location
 template <typename T>
 typename enable_if<sizeof(T) == 1, T>::type progMemLoad(const T* p) {
-#ifdef __AVR__
-  return reinterpret_cast<T>(pgm_read_byte(p));
+#ifdef PROGMEM
+  return T(pgm_read_byte(p));
 #else
   return reinterpret_cast<T>(*p);
 #endif
@@ -25,8 +25,8 @@ template <typename T>
 void progMemLoad(
     const T* p,
     typename enable_if<sizeof(T) == 1, T>::type& result) {
-#ifdef __AVR__
-  result = reinterpret_cast<T>(pgm_read_byte(p));
+#ifdef PROGMEM
+  result = T(pgm_read_byte(p));
 #else
   result = reinterpret_cast<T>(*p);
 #endif
@@ -36,7 +36,7 @@ void progMemLoad(
 template <typename T>
 typename enable_if<(sizeof(T) > 1), T>::type progMemLoad(const T* p) {
   T result;
-#ifdef __AVR__
+#ifdef PROGMEM
   memcpy_P(&result, p, sizeof(T));
 #else
   memcpy(&result, p, sizeof(T));
@@ -49,7 +49,7 @@ template <typename T>
 void progMemLoad(
     const T* p,
     typename enable_if<(sizeof(T) > 1), T>::type& result) {
-#ifdef __AVR__
+#ifdef PROGMEM
   memcpy_P(&result, p, sizeof(T));
 #else
   memcpy(&result, p, sizeof(T));
@@ -60,17 +60,31 @@ void progMemLoad(
 template <typename T>
 class ProgMemIter {
   const T* p_;
+#ifdef PROGMEM
+  // I have mixed feelings about this; it is present to have parity
+  // between the avr and non-avr builds.  Our unit tests run on non-avr
+  // systems and the lest library uses this pattern:
+  // for (auto &c : str)
+  // to render failed test assertions.  Having parity means that our
+  // progmem iterators use an extra byte on AVR systems.  This is probably
+  // OK, but feels a bit excessive.  I'm more concerned about using
+  // ProgMemIter on larger types, because this pads out the iterator by
+  // the size of the type.  If/when we start to use that pattern, we'll
+  // want to specialize this.
+  mutable T v_;
+#endif
 
  public:
   constexpr ProgMemIter() : p_(0) {}
   constexpr ProgMemIter(const T* p) : p_(p) {}
 
-#ifdef __AVR__
-  T operator*() const {
-    return progMemLoad(p_);
+#ifdef PROGMEM
+  const T& operator*() const {
+    progMemLoad(p_, v_);
+    return v_;
   }
 #else
-  constexpr T operator*() const {
+  const T& operator*() const {
     return *p_;
   }
 #endif

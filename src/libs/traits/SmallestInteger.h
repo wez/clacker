@@ -1,6 +1,6 @@
 #pragma once
 namespace clacker {
-// A little bit of compile time magic to determine the smallest
+// A little bit of compile time magic to determinimume the smallest
 // integer width suitable to hold a given number of bits.
 // http://stackoverflow.com/a/9095432/149111
 template <unsigned int N>
@@ -29,57 +29,135 @@ template <typename T>
 struct numeric_traits;
 
 template <>
-struct numeric_traits<uint8_t> {
-  static constexpr uint8_t min() {
-    return 0;
+struct numeric_traits<int8_t> {
+  using unsigned_type = uint8_t;
+  using signed_type = int8_t;
+
+  static constexpr int8_t minimum() {
+    return -maximum();
   }
-  static constexpr uint8_t max() {
-    return (1 << 8) - 1;
+  static constexpr int8_t maximum() {
+    return (1u << 7) - 1u;
+  }
+};
+
+template <>
+struct numeric_traits<char> {
+  using unsigned_type = unsigned char;
+  using signed_type = char;
+
+  static constexpr char minimum() {
+    return -maximum();
+  }
+  static constexpr char maximum() {
+    return (1u << 7) - 1u;
+  }
+};
+
+template <>
+struct numeric_traits<int16_t> {
+  using unsigned_type = uint16_t;
+  using signed_type = int16_t;
+
+  static constexpr int16_t minimum() {
+    return -maximum();
+  }
+  static constexpr uint16_t maximum() {
+    return (1u << 15) - 1u;
+  }
+};
+
+template <>
+struct numeric_traits<int32_t> {
+  using unsigned_type = uint32_t;
+  using signed_type = int32_t;
+
+  static constexpr int32_t minimum() {
+    return -maximum();
+  }
+  static constexpr uint32_t maximum() {
+    return (1u << 31) - 1u;
+  }
+};
+
+template <>
+struct numeric_traits<int64_t> {
+  using unsigned_type = uint64_t;
+  using signed_type = int64_t;
+
+  static constexpr int64_t minimum() {
+    return -maximum();
+  }
+  static constexpr int64_t maximum() {
+    return (1ull << 63) - 1u;
+  }
+};
+
+template <>
+struct numeric_traits<uint8_t> {
+  using unsigned_type = uint8_t;
+  using signed_type = int8_t;
+
+  static constexpr uint8_t minimum() {
+    return 0u;
+  }
+  static constexpr uint8_t maximum() {
+    return 0xffu;
   }
 };
 
 template <>
 struct numeric_traits<uint16_t> {
-  static constexpr uint16_t min() {
-    return 0;
+  using unsigned_type = uint16_t;
+  using signed_type = int16_t;
+
+  static constexpr uint16_t minimum() {
+    return 0u;
   }
-  static constexpr uint16_t max() {
-    return (1 << 16) - 1;
+  static constexpr uint16_t maximum() {
+    return 0xffffu;
   }
 };
 
 template <>
 struct numeric_traits<uint32_t> {
-  static constexpr uint32_t min() {
-    return 0;
+  using unsigned_type = uint32_t;
+  using signed_type = int32_t;
+
+  static constexpr uint32_t minimum() {
+    return 0u;
   }
-  static constexpr uint32_t max() {
-    return (1 << 32) - 1;
+  static constexpr uint32_t maximum() {
+    return 0xffffffffu;
   }
 };
 
 template <>
 struct numeric_traits<uint64_t> {
-  static constexpr uint64_t min() {
-    return 0;
+  using unsigned_type = uint64_t;
+  using signed_type = int64_t;
+
+  static constexpr uint64_t minimum() {
+    return 0u;
   }
-  static constexpr uint64_t max() {
-    return (1 << 64) - 1;
+  static constexpr uint64_t maximum() {
+    return 0xffffffffffffffffu;
   }
 };
 
-// smallest_integer_max<123U>::type evalutes to uint8_t; the smallest integer
+// smallest_integer_maximum<123U>::type evalutes to uint8_t; the smallest
+// integer
 // type that can hold the unsigned integer template parameter.
 template <unsigned int N>
-struct smallest_integer_max {
+struct smallest_integer_maximum {
   using type = typename conditional<
-      (N <= numeric_traits<uint8_t>::max()),
+      (N <= numeric_traits<uint8_t>::maximum()),
       uint8_t,
       typename conditional<
-          (N <= numeric_traits<uint16_t>::max()),
+          (N <= numeric_traits<uint16_t>::maximum()),
           uint16_t,
           typename conditional<
-              (N <= numeric_traits<uint32_t>::max()),
+              (N <= numeric_traits<uint32_t>::maximum()),
               uint32_t,
               uint64_t>::type>::type>::type;
 };
