@@ -16,7 +16,8 @@ class UnitTest(firmware.Linkable):
 
     def __init__(self, name, srcs=None, deps=None, cppflags=None):
         cppflags = cppflags or []
-        cppflags.append('-Dlest_FEATURE_AUTO_REGISTER=1')
+        deps = deps or []
+        deps.append('src/testing/lest:lest')
         super(UnitTest, self).__init__(name, board=board.HostCompiler(),
                                        srcs=srcs,
                                        deps=deps,
