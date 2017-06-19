@@ -17,6 +17,27 @@ from tools import (
 )
 
 
+def do_setup(args=None):
+    subprocess.check_call(
+        ['pip', 'install', '-r', 'requirements.txt', '--isolated', '--root', 'pydeps'])
+
+
+def munge_path():
+    ''' Find our locally installed deps '''
+    depdir = os.path.join(os.path.dirname(__file__), 'pydeps')
+    for root, dirs, files in os.walk(depdir):
+        if 'site-packages' in dirs:
+            sys.path.insert(1, os.path.join(root, 'site-packages'))
+            return True
+
+    return False
+
+
+if not munge_path():
+    do_setup()
+    munge_path()
+
+
 def list_firmware():
     return [f for f in targets.Targets.values() if isinstance(f, firmware.Firmware)]
 
@@ -147,6 +168,14 @@ run_test_parser = subparsers.add_parser('test', help='Run tests',
 run_test_parser.add_argument(
     'test', help='which tests to build and run', nargs='*')
 run_test_parser.set_defaults(func=do_tests)
+
+setup_parser = subparsers.add_parser('setup', help='Setup clacker',
+                                     description='''
+    Ensures that you have all of the required dependencies available
+    to run the clacker utils.
+    ''')
+
+setup_parser.set_defaults(func=do_setup)
 
 args = parser.parse_args()
 args.func(args)

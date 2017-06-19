@@ -20,6 +20,9 @@ def find_sources(dir):
             if 'src/testing/lest' in full:
                 continue
 
+            if 'pydeps' in full:
+                continue
+
             _, ext = os.path.splitext(f)
 
             if ext in ['.c', '.cpp', '.h', '.hpp', '.ino']:
