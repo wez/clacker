@@ -6,6 +6,7 @@ import string
 from . import (
     board,
     firmware,
+    keymatrix,
     library,
     projectdir,
     test
@@ -32,6 +33,7 @@ def load_info_file(filename):
                     g[k] = getattr(module, k)
 
         export(firmware, g)
+        export(keymatrix, g)
         export(library, g)
         export(board, g)
         export(test, g)

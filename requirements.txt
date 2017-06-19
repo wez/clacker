@@ -1,2 +1,3 @@
 pykicad
+shapely
 skidl

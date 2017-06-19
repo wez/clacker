@@ -23,6 +23,10 @@ def find_sources(dir):
             if 'pydeps' in full:
                 continue
 
+            if 'outputs/' in full:
+                # Don't format generated code(!)
+                continue
+
             _, ext = os.path.splitext(f)
 
             if ext in ['.c', '.cpp', '.h', '.hpp', '.ino']:

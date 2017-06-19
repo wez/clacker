@@ -7,11 +7,7 @@ from . import targets
 from . import board
 from . import library
 from . import projectdir
-
-
-def mkdir_p(d):
-    if not os.path.isdir(d):
-        os.makedirs(d)
+from . import filesystem
 
 
 class Linkable(targets.Target):
@@ -67,7 +63,7 @@ class Linkable(targets.Target):
         objs = []
 
         libname = os.path.join(outputs, lib.full_name.replace(':', '/')) + '.a'
-        mkdir_p(os.path.dirname(libname))
+        filesystem.mkdir_p(os.path.dirname(libname))
         print('Should make lib %s' % libname)
 
         for s in srcs:
@@ -78,7 +74,7 @@ class Linkable(targets.Target):
             ofile = os.path.join(outputs, '%s.o' % name)
             depfile = os.path.join(outputs, '%s.d' % name)
 
-            mkdir_p(os.path.dirname(ofile))
+            filesystem.mkdir_p(os.path.dirname(ofile))
 
             if check_depfile(ofile, depfile):
                 print('%s from %s' % (ofile, s))
@@ -105,7 +101,7 @@ class Linkable(targets.Target):
             os.path.join(
                 'outputs',
                 self.full_name.replace(':', '/')))
-        mkdir_p(outputs)
+        filesystem.mkdir_p(outputs)
 
         deps = self._expand_deps() + self.board.injected_deps()
 
@@ -113,8 +109,8 @@ class Linkable(targets.Target):
         libs = []
         for d in deps:
             if not isinstance(d, library.Library):
-                raise Exception(
-                    "Don't know how to build %r" % d)
+                print('* Nothing to build for %s' % d.full_name)
+                continue
 
             for obj in self._build_library(d, outputs):
                 _, ext = os.path.splitext(obj)

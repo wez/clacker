@@ -33,6 +33,7 @@ class Library(targets.Target):
         flags = self.get_scoped_cppflags(board) + self.get_cppflags(board)
 
         for d in self._expand_deps():
-            flags += d.get_cppflags(board)
+            if hasattr(d, 'get_cppflags'):
+                flags += d.get_cppflags(board)
 
         return flags

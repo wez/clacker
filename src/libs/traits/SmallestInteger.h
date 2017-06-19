@@ -1,4 +1,6 @@
 #pragma once
+#include "src/libs/traits/Traits.h"
+
 namespace clacker {
 // A little bit of compile time magic to determinimume the smallest
 // integer width suitable to hold a given number of bits.

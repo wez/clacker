@@ -7,20 +7,6 @@ import os
 import sys
 import subprocess
 
-from tools import (
-    infofile,
-    firmware,
-    projectdir,
-    targets,
-    tidy,
-    test,
-)
-
-
-def do_setup(args=None):
-    subprocess.check_call(
-        ['pip', 'install', '-r', 'requirements.txt', '--isolated', '--root', 'pydeps'])
-
 
 def munge_path():
     ''' Find our locally installed deps '''
@@ -33,9 +19,24 @@ def munge_path():
     return False
 
 
+def do_setup(args=None):
+    subprocess.check_call(
+        ['pip', 'install', '-r', 'requirements.txt', '--isolated', '--root', 'pydeps'])
+
+
 if not munge_path():
     do_setup()
     munge_path()
+
+
+from tools import (
+    infofile,
+    firmware,
+    projectdir,
+    targets,
+    tidy,
+    test,
+)
 
 
 def list_firmware():
