@@ -45,7 +45,9 @@ class FreeRTOS(Library):
             core = glob('%s/FreeRTOS/Source/*.c' % upstream)
 
             port += glob('%s/%s/*.c' % (self.dir, arch))
+            port += glob('%s/%s/*.cpp' % (self.dir, arch))
             port += glob('%s/*.c' % self.dir)
+            port += glob('%s/*.cpp' % self.dir)
 
         return core + port
 

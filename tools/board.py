@@ -345,3 +345,62 @@ class FQBN(Board):
             if result == 0:
                 break
             print('(Failed, will retry)')
+
+
+class AVRBoard(Board):
+    ''' Vanilla AVR-libc target '''
+
+    def __init__(self, mcu, clock):
+        self.mcu = mcu
+        self.clock = clock
+        self.fqbn = 'avr-libc:%s:%s' % (mcu, clock)
+
+    def compile_src(self, srcfile, objfile, depfile=None, cppflags=None):
+        cppflags = [
+            '-g',
+            '-c',
+            '-Os',
+            '-MMD',
+            '-mmcu={mcu}'.format(mcu=self.mcu),
+            '-DF_CPU={clock}UL'.format(clock=self.clock),
+        ] + _cmd_split(cppflags or '')
+
+        if srcfile.endswith('.cpp'):
+            cppflags = [
+                '-std=gnu++11',
+                '-fno-exceptions',
+                '-ffunction-sections',
+                '-fdata-sections',
+                '-fno-threadsafe-statics',
+            ] + cppflags
+            subprocess.check_call(
+                ['avr-g++'] + cppflags + ['-o', objfile, srcfile])
+        else:
+            subprocess.check_call(
+                ['avr-gcc'] + cppflags + ['-o', objfile, srcfile])
+
+    def link_lib(self, libfile, objfiles):
+        subprocess.check_call(['avr-ar', 'rcs', libfile] + objfiles)
+
+    def link_exe(self, exefile, objfiles):
+        subprocess.check_call(['avr-g++', '-Os', '-mmcu=%s' %
+                               self.mcu, '-Wl,--gc-sections', '-o', exefile] + objfiles)
+        subprocess.check_call(['avr-size', exefile])
+
+    def exe_to_hex(self, exefile, hexfile):
+        subprocess.check_call(
+            ['avr-objcopy', '-O', 'ihex', '-R', '.eeprom', exefile, hexfile])
+
+    def upload(self, hexfile, port=None):
+        cmd = [
+            'avrdude',
+            '-p',
+            self.mcu,
+            '-U',
+            'flash:w:%s:i' % hexfile,
+            '-cavr109',
+            '-b57600',
+            '-D']
+        if port:
+            cmd.append('-P%s' % port)
+        subprocess.check_call(cmd)

@@ -36,6 +36,10 @@ extern "C" int main(void) {
 #ifdef USBCON
   USBCON = 0;
 #endif
+#ifdef MCUSR
+  MCUSR &= ~(1 << WDRF);
+#endif
+  wdt_disable();
 #endif // AVR
 
   // Call out to the firmware-provided function to set

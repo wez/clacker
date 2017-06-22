@@ -14,6 +14,13 @@
 #define portUSE_WDTO WDTO_15MS
 #define configTICK_RATE_HZ 66
 
+/* Timing for the scheduler.
+ * Watchdog Timer is 128kHz nominal,
+ * but 120 kHz at 5V DC and 25 degrees is actually more accurate,
+ * from data sheet.
+ */
+#define portTICK_PERIOD_MS ((TickType_t)16)
+
 typedef portSTACK_TYPE StackType_t;
 typedef signed char BaseType_t;
 typedef unsigned char UBaseType_t;
@@ -52,15 +59,6 @@ typedef uint32_t TickType_t;
 #define portNOP() __asm__ __volatile__("nop");
 
 #define portSUPPRESS_TICKS_AND_SLEEP(duration) vApplicationSleep(duration)
-
-/* Timing for the scheduler.
- * Watchdog Timer is 128kHz nominal,
- * but 120 kHz at 5V DC and 25 degrees is actually more accurate,
- * from data sheet.
- */
-#define portTICK_PERIOD_MS \
-  ((TickType_t)_BV(        \
-      portUSE_WDTO + 4)) // Inaccurately assuming 128 kHz Watchdog Timer.
 
 #ifdef __cplusplus
 extern "C" {

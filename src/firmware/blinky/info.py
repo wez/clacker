@@ -27,3 +27,15 @@ Firmware(
     board=HostCompiler(),
     deps=['src/libs/tasks:tasks', 'src/libs/progmem:progmem'],
     srcs=['main.cpp'])
+
+Firmware(
+    name='ps2rgb',
+    board=AVRBoard(mcu='atmega32a', clock=12000000),
+    deps=['src/libs/tasks:tasks', 'src/libs/progmem:progmem'],
+    srcs=['main.cpp'])
+
+Firmware(
+    name='feather-noduino',
+    board=AVRBoard(mcu='atmega32u4', clock=8000000),
+    deps=['src/libs/tasks:tasks', 'src/libs/progmem:progmem'],
+    srcs=['main.cpp'])

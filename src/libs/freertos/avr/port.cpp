@@ -10,7 +10,18 @@
 
 /* Start tasks with interrupts enabled. */
 #define portFLAGS_INT_ENABLED ((StackType_t)0x80)
+#if defined(WDT_vect) && defined(ARDUINO)
+#define USE_WDT 1
+#else
+#define USE_WDT 0
+#endif
+
+#if USE_WDT
 #define portSCHEDULER_ISR WDT_vect
+#else
+#include "src/libs/timer/Timer.h"
+#define portSCHEDULER_ISR TIMER1_COMPA_vect
+#endif
 
 /* We require the address of the pxCurrentTCB variable, but don't want to know
  * any details of its type. */
@@ -442,6 +453,7 @@ void vPortYieldFromTick(void) {
   __asm__ __volatile__("ret");
 }
 
+#ifdef WDT_vect
 /**
         Enable the watchdog timer, configuring it for expire after
         (value) timeout (which is a combination of the WDP0
@@ -473,14 +485,27 @@ void vPortYieldFromTick(void) {
             (value & 0x08 ? _WD_PS3_MASK : 0x00) | _BV(WDIF) | _BV(WDIE) | \
             (value & 0x07)))                                               \
       : "r0")
+#endif
 
 // initialize watchdog
 void prvSetupTimerInterrupt(void) {
+#if USE_WDT
   // reset watchdog
   wdt_reset();
 
   // set up WDT Interrupt (rather than the WDT Reset).
   wdt_interrupt_enable(portUSE_WDTO);
+#else
+  // Use timer instead
+  using namespace clacker::avr;
+  setupTimer<Timer1>(configTICK_RATE_HZ);
+#if 0
+ Timer1::setup(
+     WaveformGenerationMode::ClearOnTimerMatchOutputCompare,
+     ClockSource::Prescale256,
+     1170);
+#endif
+#endif
 }
 
 #if configUSE_PREEMPTION == 1

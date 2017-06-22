@@ -78,7 +78,7 @@ struct numeric_traits<int32_t> {
     return -maximum();
   }
   static constexpr uint32_t maximum() {
-    return (1u << 31) - 1u;
+    return (1ul << 31) - 1u;
   }
 };
 
