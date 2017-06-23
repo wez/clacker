@@ -242,8 +242,13 @@ struct Timer1 {
   }
 };
 
+struct TimerConfiguration {
+  ClockSource source;
+  uint32_t compare;
+};
+
 template <typename Timer>
-void setupTimer(uint32_t frequency) {
+TimerConfiguration computeTimerConfig(uint32_t frequency) {
   // Compute parameters such that the timer will trigger its
   // ISR at a rate to match the provided frequency.  We do
   // this by computing the smallest compare value that fits
@@ -274,10 +279,16 @@ void setupTimer(uint32_t frequency) {
     }
   }
 
+  return TimerConfiguration{source, compare};
+}
+
+template <typename Timer>
+void setupTimer(uint32_t frequency) {
+  auto config = computeTimerConfig<Timer>(frequency);
   Timer::setup(
       WaveformGenerationMode::ClearOnTimerMatchOutputCompare,
-      source,
-      static_cast<typename Timer::resolution_t>(compare));
+      config.source,
+      static_cast<typename Timer::resolution_t>(config.compare));
 }
 }
 }

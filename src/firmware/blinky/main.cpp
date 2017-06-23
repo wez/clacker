@@ -25,7 +25,7 @@ clacker::Task<> blinker([] {
 #else
     printf("toggle\n");
 #endif
-    clacker::delayMilliseconds(300);
+    clacker::delayMilliseconds(1000);
   }
 });
 

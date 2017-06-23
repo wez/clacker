@@ -14,6 +14,12 @@
 #define portUSE_WDTO WDTO_15MS
 #define configTICK_RATE_HZ 66
 
+#if defined(WDT_vect) && defined(ARDUINO)
+#define portTICK_USES_WDT 1
+#else
+#define portTICK_USES_WDT 0
+#endif
+
 /* Timing for the scheduler.
  * Watchdog Timer is 128kHz nominal,
  * but 120 kHz at 5V DC and 25 degrees is actually more accurate,

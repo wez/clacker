@@ -10,13 +10,8 @@
 
 /* Start tasks with interrupts enabled. */
 #define portFLAGS_INT_ENABLED ((StackType_t)0x80)
-#if defined(WDT_vect) && defined(ARDUINO)
-#define USE_WDT 1
-#else
-#define USE_WDT 0
-#endif
 
-#if USE_WDT
+#if portTICK_USES_WDT
 #define portSCHEDULER_ISR WDT_vect
 #else
 #include "src/libs/timer/Timer.h"
@@ -412,10 +407,11 @@ BaseType_t xPortStartScheduler(void) {
 }
 
 void vPortEndScheduler(void) {
-  /* It is unlikely that the AVR port will get stopped.  If required simply
-  disable the tick interrupt here. */
-
+// It is unlikely that the AVR port will get stopped.  If required simply
+// disable the tick interrupt here.
+#if portTICK_USES_WDT
   wdt_disable(); // disable Watchdog Timer
+#endif
 }
 
 /*
@@ -489,7 +485,7 @@ void vPortYieldFromTick(void) {
 
 // initialize watchdog
 void prvSetupTimerInterrupt(void) {
-#if USE_WDT
+#if portTICK_USES_WDT
   // reset watchdog
   wdt_reset();
 
