@@ -12,6 +12,37 @@ extern "C" void launchTasks(void);
 
 namespace clacker {
 
+// A Critical section disables interrupts while it is in scope.
+// CriticalSections must not nest.
+// FreeRTOS APIs must not be called from within a CriticalSection.
+struct CriticalSection {
+  CriticalSection() {
+    taskENTER_CRITICAL();
+  }
+  ~CriticalSection() {
+    taskEXIT_CRITICAL();
+  }
+
+  CriticalSection(const CriticalSection&) = delete;
+  CriticalSection(CriticalSection&&) = delete;
+};
+
+// While an instance of SuspendScheduler is in scope, the RTOS
+// task scheduler is suspended.  Interrupts are still enabled!
+// SuspendScheduler may be nested.
+// API calls that may cause a context switch must not be called
+// while the scheduler is suspended.
+struct SuspendScheduler {
+  SuspendScheduler() {
+    vTaskSuspendAll();
+  }
+  ~SuspendScheduler() {
+    xTaskResumeAll();
+  }
+  SuspendScheduler(const SuspendScheduler&) = delete;
+  SuspendScheduler(SuspendScheduler&&) = delete;
+};
+
 template <uint32_t StackSize = configMINIMAL_STACK_SIZE, uint8_t Priority = 2>
 class Task {
   using Func = void (*)();

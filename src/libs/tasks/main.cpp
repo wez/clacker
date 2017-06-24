@@ -1,3 +1,4 @@
+#include <avr/power.h>
 #include "src/libs/tasks/Tasks.h"
 
 // This file serves as the second tier startup code for the projects
@@ -40,6 +41,8 @@ extern "C" int main(void) {
   MCUSR &= ~(1 << WDRF);
 #endif
   wdt_disable();
+  /* Disable clock division */
+  clock_prescale_set(clock_div_1);
 #endif // AVR
 
   // Call out to the firmware-provided function to set

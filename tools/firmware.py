@@ -13,13 +13,28 @@ from . import filesystem
 class Linkable(targets.Target):
     ''' Base class for building an executable target '''
 
-    def __init__(self, name, board=None, srcs=None, deps=None, cppflags=None):
+    def __init__(self, name, board=None, srcs=None, deps=None, cppflags=None,
+                 pid=0x6000,
+                 vid=0xfeed,
+                 product=None,
+                 manufacturer='Unknown'):
         super(Linkable, self).__init__(name)
         self.board = board
+        # We're going to add these cppflags to everything that we build
+        self.cppflags = cppflags or []
+
+        self.cppflags += [
+            '-DCLACKER_USB_PID=%s' % pid,
+            '-DCLACKER_USB_VID=%s' % vid,
+            "'-DCLACKER_USB_PRODUCT=\"%s\"'" % product or name,
+            "'-DCLACKER_USB_PRODUCT_UNICODE=L\"%s\"'" % product,
+            "'-DCLACKER_USB_MANUFACTURER=\"%s\"'" % manufacturer,
+            "'-DCLACKER_USB_MANUFACTURER_UNICODE=L\"%s\"'" % manufacturer,
+        ]
+
         self.lib = library.Library('%s-lib' % name,
                                    srcs=srcs,
                                    deps=deps,
-                                   cppflags=cppflags,
                                    no_dot_a=True)
 
     def get_deps(self):
@@ -79,8 +94,8 @@ class Linkable(targets.Target):
             if check_depfile(ofile, depfile):
                 print('%s from %s' % (ofile, s))
 
-                cppflags = ' '.join(lib.get_cppflags_for_compile(self.board) + [
-                    '-I%s' % projectdir.Root])
+                cppflags = ' '.join(
+                    self.cppflags + lib.get_cppflags_for_compile(self.board) + ['-I%s' % projectdir.Root])
 
                 self.board.compile_src(s, ofile, depfile, cppflags)
 
