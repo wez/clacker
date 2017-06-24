@@ -76,17 +76,9 @@ class KeyMatrix(targets.Target):
         with open(hfile, 'w') as f:
             f.write('// %s - %s\n' % (self.name, layout.name()))
             f.write('''
-#include "src/libs/traits/SmallestInteger.h"
+#include "src/libs/keymatrix/KeyMatrix.h"
 namespace clacker {{
-
-struct KeyMatrix {{
-    static constexpr uint8_t NumRows = {rows};
-    static constexpr uint8_t NumCols = {cols};
-    using col_t = typename smallest_integer_bits<NumCols>::type;
-
-    col_t rows[NumRows];
-}};
-
+using Matrix = KeyMatrix<{rows}, {cols}>;
 }}
             '''.format(rows=rows, cols=cols))
 
