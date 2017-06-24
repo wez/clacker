@@ -1,6 +1,7 @@
 #pragma once
 #include "FreeRTOS.h"
 #include "src/libs/tasks/Result.h"
+#include "src/libs/tasks/Timing.h"
 #include "task.h"
 
 // This function is provided by the firmware project to launch
@@ -10,9 +11,6 @@
 extern "C" void launchTasks(void);
 
 namespace clacker {
-
-TickType_t millisecondsToTicks(uint32_t ms);
-void delayMilliseconds(uint32_t ms);
 
 template <uint32_t StackSize = configMINIMAL_STACK_SIZE, uint8_t Priority = 2>
 class Task {
@@ -39,11 +37,8 @@ class Task {
     t_ = xTaskCreateStatic(run, "", StackSize, this, Priority, stack_, &tBuf_);
     return freertos::BoolResult::Ok();
 #else
-    auto err = xTaskCreate(run, "", StackSize, this, Priority, &t_);
-    if (err == pdPASS) {
-      return freertos::BoolResult::Ok();
-    }
-    return freertos::BoolResult::Error(err);
+    return freertos::boolResult(
+        xTaskCreate(run, "", StackSize, this, Priority, &t_));
 #endif
   }
 };
