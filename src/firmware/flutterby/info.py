@@ -1,7 +1,8 @@
 Firmware(
     name='flutterby',
     board=FQBN('adafruit:avr:feather32u4'),
-    deps=['src/libs/tasks:tasks', 'src/libs/progmem:progmem', ':matrix'],
+    deps=['src/libs/tasks:tasks', 'src/libs/progmem:progmem', ':matrix',
+          'src/libs/serial:avr'],
     srcs=['main.cpp'])
 
 KeyMatrix(
