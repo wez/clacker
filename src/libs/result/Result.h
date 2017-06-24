@@ -82,10 +82,12 @@ class Result {
       case State::kEMPTY:
         break;
       case State::kVALUE:
-        new (&value_) Value(move(other.value_));
+        // new (&value_) Value(move(other.value_));
+        value_ = move(other.value_);
         break;
       case State::kERROR:
-        new (&error_) ErrorType(move(other.error_));
+        // new (&error_) ErrorType(move(other.error_));
+        error_ = move(other.error_);
         break;
     }
     other.~Result();
@@ -102,10 +104,12 @@ class Result {
         case State::kEMPTY:
           break;
         case State::kVALUE:
-          new (&value_) Value(move(other.value_));
+          // new (&value_) Value(move(other.value_));
+          value_ = move(other.value_);
           break;
         case State::kERROR:
-          new (&error_) ErrorType(move(other.error_));
+          // new (&error_) ErrorType(move(other.error_));
+          error_ = move(other.error_);
           break;
       }
 
