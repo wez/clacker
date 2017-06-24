@@ -34,5 +34,5 @@ void launchTasks(void) {
   Led::setup();
   Led::set();
 #endif
-  blinker.start();
+  blinker.start().panicIfError();
 }

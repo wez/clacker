@@ -36,5 +36,5 @@ clacker::Task<> blinker([] {
 void launchTasks(void) {
   Led::setup();
   RowPins::setup();
-  blinker.start();
+  blinker.start().panicIfError();
 }

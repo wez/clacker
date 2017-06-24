@@ -1,5 +1,6 @@
 #pragma once
 #include "FreeRTOS.h"
+#include "src/libs/tasks/Result.h"
 #include "task.h"
 
 // This function is provided by the firmware project to launch
@@ -33,11 +34,16 @@ class Task {
   Task(const Task&) = delete;
   Task(Task&&) = delete;
 
-  void start() {
+  freertos::BoolResult start() {
 #if configSUPPORT_STATIC_ALLOCATION == 1
     t_ = xTaskCreateStatic(run, "", StackSize, this, Priority, stack_, &tBuf_);
+    return freertos::BoolResult::Ok();
 #else
-    xTaskCreate(run, "", StackSize, this, Priority, &t_);
+    auto err = xTaskCreate(run, "", StackSize, this, Priority, &t_);
+    if (err == pdPASS) {
+      return freertos::BoolResult::Ok();
+    }
+    return freertos::BoolResult::Error(err);
 #endif
   }
 };
