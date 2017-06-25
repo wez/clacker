@@ -60,34 +60,19 @@ void progMemLoad(
 template <typename T>
 class ProgMemIter {
   const T* p_;
-#ifdef PROGMEM
-  // I have mixed feelings about this; it is present to have parity
-  // between the avr and non-avr builds.  Our unit tests run on non-avr
-  // systems and the lest library uses this pattern:
-  // for (auto &c : str)
-  // to render failed test assertions.  Having parity means that our
-  // progmem iterators use an extra byte on AVR systems.  This is probably
-  // OK, but feels a bit excessive.  I'm more concerned about using
-  // ProgMemIter on larger types, because this pads out the iterator by
-  // the size of the type.  If/when we start to use that pattern, we'll
-  // want to specialize this.
-  mutable T v_;
-#endif
 
  public:
   constexpr ProgMemIter() : p_(0) {}
   constexpr ProgMemIter(const T* p) : p_(p) {}
 
-#ifdef PROGMEM
-  const T& operator*() const {
-    progMemLoad(p_, v_);
-    return v_;
+  // Note that this doesn't return a reference to the element,
+  // because the architectural constraints of PROGMEM prohibit
+  // such an endeavor.
+  T operator*() const {
+    T v;
+    progMemLoad(p_, v);
+    return v;
   }
-#else
-  const T& operator*() const {
-    return *p_;
-  }
-#endif
 
   ProgMemIter& operator=(const ProgMemIter&) = default;
 
@@ -138,6 +123,10 @@ class ProgMemIter {
   constexpr size_t operator-(const ProgMemIter& other) const {
     return p_ - other.p_;
   }
+
+  const T* rawPointer() const {
+    return p_;
+  }
 };
 
 template <typename T>
@@ -147,6 +136,5 @@ ProgMemIter<T> makeProgMemIter(const T* ptr) {
 
 // These are instantiated in pointers.cpp to avoid inlining
 // common pointer types and bloating the code
-extern template class ProgMemIter<void*>;
-extern template class ProgMemIter<char*>;
+extern template class ProgMemIter<char>;
 }

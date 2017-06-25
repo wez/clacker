@@ -5,14 +5,12 @@
 
 namespace clacker {
 
-void panic(const char* reason) {
-// TODO: log something to the output/serial
+[[noreturn]] void panicImpl() __attribute__((weak));
+[[noreturn]] void panicImpl() {
 #ifdef __EXCEPTIONS
-  throw std::runtime_error(reason);
+  throw std::runtime_error("panicked");
 #endif
-  // TODO: either blink the led or jump to the bootloader
-  while (true) {
-    ;
-  }
+  panicReset();
+  exit(1);
 }
 }

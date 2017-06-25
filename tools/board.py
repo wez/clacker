@@ -72,13 +72,14 @@ class HostCompiler(Board):
         self.fqbn = 'host'
 
     def compile_src(self, srcfile, objfile, depfile=None, cppflags=None):
-        cppflags = cppflags or ''
+        cppflags = _cmd_split(cppflags or '')
+        cppflags.append('-D__CLACKER_HOST_BOARD')
         if srcfile.endswith('.cpp'):
             subprocess.check_call(
-                ['g++', '-g', '-c', '-std=c++11', '-MMD', '-o', objfile, srcfile] + _cmd_split(cppflags))
+                ['g++', '-g', '-c', '-std=c++11', '-MMD', '-o', objfile, srcfile] + cppflags)
         else:
             subprocess.check_call(
-                ['gcc', '-g', '-c', '-MMD', '-o', objfile, srcfile] + _cmd_split(cppflags))
+                ['gcc', '-g', '-c', '-MMD', '-o', objfile, srcfile] + cppflags)
 
     def link_exe(self, exefile, objfiles):
         subprocess.check_call(['g++', '-o', exefile] + objfiles)
@@ -361,6 +362,8 @@ class AVRBoard(Board):
             '-c',
             '-Os',
             '-MMD',
+            '-ffunction-sections',
+            '-fdata-sections',
             '-mmcu={mcu}'.format(mcu=self.mcu),
             '-DF_CPU={clock}UL'.format(clock=self.clock),
         ] + _cmd_split(cppflags or '')
@@ -369,8 +372,6 @@ class AVRBoard(Board):
             cppflags = [
                 '-std=gnu++11',
                 '-fno-exceptions',
-                '-ffunction-sections',
-                '-fdata-sections',
                 '-fno-threadsafe-statics',
             ] + cppflags
             subprocess.check_call(

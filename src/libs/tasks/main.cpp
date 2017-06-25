@@ -1,6 +1,3 @@
-#ifdef __AVR__
-#include <avr/power.h>
-#endif
 #include "src/libs/tasks/Tasks.h"
 
 // This file serves as the second tier startup code for the projects
@@ -26,27 +23,6 @@ extern "C" void setup(void) {
 extern "C" void loop(void) {}
 #else
 extern "C" int main(void) {
-// The bootloader may have left USB interrupts enabled, but
-// the firmware that we're running may not have set up an
-// ISR for them, so we must disable them here to avoid
-// faulting the MCU after re-flashing.
-#ifdef __AVR__
-#if defined(UCSRB)
-  UCSRB = 0;
-#elif defined(UCSR0B)
-  UCSR0B = 0;
-#endif
-#ifdef USBCON
-  USBCON = 0;
-  /* Disable clock division */
-  clock_prescale_set(clock_div_1);
-#endif
-#ifdef MCUSR
-  MCUSR &= ~(1 << WDRF);
-#endif
-  wdt_disable();
-#endif // AVR
-
   // Call out to the firmware-provided function to set
   // up tasks
   launchTasks();

@@ -1,12 +1,11 @@
 #pragma once
+#include "src/libs/result/Logging.h"
 #include "src/libs/traits/Traits.h"
 
 namespace clacker {
 
 // A stand-in for the void type, but easier to match in templates
 struct Unit {};
-
-[[noreturn]] void panic(const char* reason);
 
 template <typename Value, typename ErrorType>
 class Result {
@@ -171,9 +170,9 @@ class Result {
       case State::kVALUE:
         return;
       case State::kEMPTY:
-        panic("Uninitialized Result");
+        panic(makeConstString("Uninitialized Result"));
       case State::kERROR:
-        panic("Result holds Error, not Value");
+        panic(makeConstString("Result holds Error, not Value"));
     }
   }
 
@@ -202,9 +201,9 @@ class Result {
   void panicIfNotError() {
     switch (state_) {
       case State::kVALUE:
-        panic("Result holds Value, not Error");
+        panic(makeConstString("Result holds Value, not Error"));
       case State::kEMPTY:
-        panic("Uninitialized Result");
+        panic(makeConstString("Uninitialized Result"));
       case State::kERROR:
         return;
     }

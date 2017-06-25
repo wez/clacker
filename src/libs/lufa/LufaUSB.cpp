@@ -348,11 +348,6 @@ void LufaUSB::tick() {
   USB_USBTask();
 }
 
-void LufaUSB::bloop() {
-  CriticalSection disableInterrupts;
-  CDC_Device_SendData(&lufa_VirtualSerial_CDC_Interface, "bloop\r\n", 7);
-}
-
 void LufaUSB::populateReport(USB_KeyboardReport_Data_t* ReportData) {
   memcpy(ReportData->KeyCode, pendingReport_.keys, sizeof(ReportData->KeyCode));
   static_assert(

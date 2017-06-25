@@ -8,6 +8,7 @@
 //
 // None of the methods or classes in this file perform any dynamic
 // memory allocation.
+#include <stdio.h>
 #include <string.h>
 #include "src/libs/progmem/ProgMem.h"
 #include "src/libs/traits/Copy.h"
@@ -220,6 +221,19 @@ class ProgMemString
   }
 };
 
+template <class Char, size_t Size, typename... Args>
+int snprintf(
+    char* buf,
+    size_t size,
+    ProgMemString<Size, Char>&& fmt,
+    Args&&... args) {
+#ifdef __AVR__
+  return snprintf_P(buf, size, fmt.begin().rawPointer(), args...);
+#else
+  return ::snprintf(buf, size, fmt.begin().rawPointer(), args...);
+#endif
+}
+
 // FixedString is a convenience for working with mutable byte strings
 // with a fixed storage capacity.
 template <size_t Size>
@@ -230,6 +244,11 @@ using FixedString = MutableString<Size, char>;
 template <class Char, size_t Size>
 constexpr FixedString<Size - 1u> makeFixedString(const Char (&a)[Size]) {
   return {a};
+}
+
+template <size_t Size, typename... Args>
+int snprintf(char* buf, size_t size, FixedString<Size>&& fmt, Args&&... args) {
+  return ::snprintf(buf, size, fmt.begin(), args...);
 }
 }
 
@@ -249,3 +268,21 @@ constexpr FixedString<Size - 1u> makeFixedString(const Char (&a)[Size]) {
     static const char _data[] __CLACKER_PROGMEM = (literal); \
     return ::clacker::makeProgMemIter(_data);                \
   }())
+
+#ifdef __CLACKER_HOST_BOARD
+// Some glue to support testing with lest.
+// Without this helper function lest would try to obtain a const
+// ref to ProgMem data in the string, which is a compile error
+#include <string>
+namespace lest {
+template <class Char, size_t Size>
+inline std::string to_string(
+    ::clacker::ProgMemString<Size, Char> const& container) {
+  std::string result;
+  for (auto c : container) {
+    result.push_back(c);
+  }
+  return result;
+}
+}
+#endif

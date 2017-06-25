@@ -31,7 +31,7 @@ clacker::Task<> blinker([] {
   while (true) {
     Led::toggle();
     delayMilliseconds(1000);
-    lufa::LufaUSB::get().bloop();
+    logln(makeConstString("bloop!"));
   }
 });
 
@@ -40,4 +40,5 @@ void launchTasks(void) {
   RowPins::setup();
   blinker.start().panicIfError();
   lufa::LufaUSB::get().start();
+  logln(makeConstString("starting up!"), 123);
 }

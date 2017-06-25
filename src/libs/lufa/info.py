@@ -18,7 +18,8 @@ class LUFA(Library):
             subprocess.check_call(['git', 'clone', '--depth', '1',
                                    self.url, upstream])
 
-        srcs = [os.path.join(self.dir, s) for s in ['LufaUSB.cpp', 'data.c']]
+        srcs = [os.path.join(self.dir, s)
+                for s in ['LufaUSB.cpp', 'data.c', 'log.cpp']]
         for d in ['LUFA/Drivers/USB/Core/AVR8',
                   'LUFA/Drivers/USB/Core',
                   'LUFA/Drivers/Peripheral/AVR8',
