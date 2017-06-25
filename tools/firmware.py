@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import re
 
 from . import targets
 from . import board
@@ -43,9 +44,9 @@ class Linkable(targets.Target):
         return [self.lib]
 
     def _build_library(self, lib, outputs):
-        print('Build library %s' % lib.full_name)
+        # print('Build library %s' % lib.full_name)
 
-        def check_depfile(objfile, depfile):
+        def check_depfile(objfile, depfile, srcfile, ext):
             ''' reads a makefile compatible dependency file.
                 Returns True if the object needs to be compiled,
                 False if it is up to date. '''
@@ -53,24 +54,30 @@ class Linkable(targets.Target):
                 obj_stat = os.lstat(objfile)
             except:
                 # doesn't exist, so compile it
+                # print('%s not present' % depfile)
                 return True
 
             if not os.path.exists(depfile):
-                return True  # needs recompile
+                # do a basic mtime check
+                src_stat = os.lstat(srcfile)
+                return src_stat.st_mtime > obj_stat.st_mtime
 
             with open(depfile, 'r') as f:
-                lines = f.readlines()
+                blob = f.read()
+                blob = blob.replace('\\', ' ')
+                blob = re.sub(r'\s+', ' ', blob)
+                lines = blob.strip().split(' ')
                 # The first line is our own object, the rest are the deps
-                for depline in lines[1:]:
-                    dep = depline.strip().rstrip('\\').strip()
-
+                for dep in lines[1:]:
                     try:
                         dep_stat = os.lstat(dep)
                         if dep_stat.st_mtime > obj_stat.st_mtime:
                             # It changed more recently, so recompile
+                            # print('%s newer than %s' % (dep, objfile))
                             return True
-                    except:
+                    except Exception as e:
                         # It doesn't exist, so recompile
+                        # print('failed to stat %s: %s. depfile is %s' % (dep, str(e), depfile))
                         return True
 
             # Up to date!
@@ -81,7 +88,7 @@ class Linkable(targets.Target):
 
         libname = os.path.join(outputs, lib.full_name.replace(':', '/')) + '.a'
         filesystem.mkdir_p(os.path.dirname(libname))
-        print('Should make lib %s' % libname)
+        # print('Should make lib %s' % libname)
 
         for s in srcs:
             name, ext = os.path.splitext(s)
@@ -93,8 +100,8 @@ class Linkable(targets.Target):
 
             filesystem.mkdir_p(os.path.dirname(ofile))
 
-            if check_depfile(ofile, depfile):
-                print('%s from %s' % (ofile, s))
+            if check_depfile(ofile, depfile, s, ext):
+                print(' COMPILE %s from %s' % (os.path.relpath(ofile), s))
 
                 cppflags = ' '.join(
                     self.cppflags + lib.get_cppflags_for_compile(self.board) + ['-I%s' % projectdir.Root])
@@ -107,7 +114,21 @@ class Linkable(targets.Target):
             # Nothing to link; header only library
             return objs
 
-        self.board.link_lib(libname, objs)
+        need_link = False
+        try:
+            lib_stat = os.lstat(libname)
+            for o in objs:
+                obj_stat = os.lstat(o)
+                if obj_stat.st_mtime > lib_stat.st_mtime:
+                    need_link = True
+                    break
+
+        except:
+            need_link = True
+
+        if need_link:
+            self.board.link_lib(libname, objs)
+
         return [libname]
 
     def build(self):

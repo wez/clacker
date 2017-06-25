@@ -73,7 +73,7 @@ class KeyMatrix(targets.Target):
                 cols = max(cols, int(math.ceil(key.x)))
 
         hfile = os.path.join(outputs, '%s-matrix.h' % self.name)
-        with open(hfile, 'w') as f:
+        with filesystem.WriteFileIfChanged(hfile) as f:
             f.write('// %s - %s\n' % (self.name, layout.name()))
             f.write('''
 #include "src/libs/keymatrix/KeyMatrix.h"

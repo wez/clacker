@@ -44,13 +44,15 @@ def tidy_py(pys):
     # `pip install --user autopep8`
     os.environ['PATH'] += ':%s/%s' % (os.environ['HOME'],
                                       '/Library/Python/2.7/bin')
-    print('autopep8', pys)
+    # print('autopep8', pys)
     subprocess.check_call(['autopep8', '--in-place'] + pys)
+    print('Tidied %d python files' % len(pys))
 
 
 def tidy_cpp(cpp):
-    print('clang-format', cpp)
+    # print('clang-format', cpp)
     subprocess.check_call(['clang-format', '-i'] + cpp)
+    print('Tidied %d C/C++ files' % len(cpp))
 
 
 def tidy(dir):

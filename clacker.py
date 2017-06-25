@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import argparse
 import os
+import shutil
 import sys
 import subprocess
 
@@ -103,6 +104,11 @@ def do_tests(args):
         f.run_tests()
 
 
+def do_clean(args):
+    outputs = os.path.join(projectdir.Root, 'outputs')
+    shutil.rmtree(outputs)
+
+
 projectdir.Root = os.path.realpath(os.path.dirname(__file__))
 
 infofile.load_info_files('src')
@@ -177,6 +183,13 @@ setup_parser = subparsers.add_parser('setup', help='Setup clacker',
     ''')
 
 setup_parser.set_defaults(func=do_setup)
+
+clean_parser = subparsers.add_parser('clean',
+                                     help='Clean up build objects',
+                                     description='''
+    Removes all build outputs from the outputs dir''')
+
+clean_parser.set_defaults(func=do_clean)
 
 args = parser.parse_args()
 args.func(args)
