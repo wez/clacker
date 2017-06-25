@@ -1,4 +1,6 @@
+#ifdef __AVR__
 #include <avr/power.h>
+#endif
 #include "src/libs/tasks/Tasks.h"
 
 // This file serves as the second tier startup code for the projects
@@ -36,13 +38,13 @@ extern "C" int main(void) {
 #endif
 #ifdef USBCON
   USBCON = 0;
+  /* Disable clock division */
+  clock_prescale_set(clock_div_1);
 #endif
 #ifdef MCUSR
   MCUSR &= ~(1 << WDRF);
 #endif
   wdt_disable();
-  /* Disable clock division */
-  clock_prescale_set(clock_div_1);
 #endif // AVR
 
   // Call out to the firmware-provided function to set
