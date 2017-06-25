@@ -31,6 +31,7 @@ clacker::Task<> blinker([] {
   while (true) {
     Led::toggle();
     delayMilliseconds(1000);
+    lufa::LufaUSB::get().bloop();
   }
 });
 

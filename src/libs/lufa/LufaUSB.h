@@ -47,6 +47,7 @@ class LufaUSB {
   void taskLoop();
 
   void populateReport(USB_KeyboardReport_Data_t* ReportData);
+  void bloop();
 
   CommandQueue queue;
 };
