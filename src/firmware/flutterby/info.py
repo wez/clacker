@@ -1,6 +1,6 @@
 Firmware(
     name='flutterby',
-    # board=FQBN('adafruit:avr:feather32u4'),
+    manufacturer='Wez Furlong',
     board=AVRBoard(mcu='atmega32u4', clock=8000000),
     deps=['src/libs/tasks:tasks', 'src/libs/progmem:progmem', ':matrix',
           'src/libs/lufa:lufa',

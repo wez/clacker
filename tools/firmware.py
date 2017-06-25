@@ -17,16 +17,18 @@ class Linkable(targets.Target):
                  pid=0x6000,
                  vid=0xfeed,
                  product=None,
-                 manufacturer='Unknown'):
+                 manufacturer='Anon'):
         super(Linkable, self).__init__(name)
         self.board = board
         # We're going to add these cppflags to everything that we build
         self.cppflags = cppflags or []
 
+        product = product or name
+
         self.cppflags += [
             '-DCLACKER_USB_PID=%s' % pid,
             '-DCLACKER_USB_VID=%s' % vid,
-            "'-DCLACKER_USB_PRODUCT=\"%s\"'" % product or name,
+            "'-DCLACKER_USB_PRODUCT=\"%s\"'" % product,
             "'-DCLACKER_USB_PRODUCT_UNICODE=L\"%s\"'" % product,
             "'-DCLACKER_USB_MANUFACTURER=\"%s\"'" % manufacturer,
             "'-DCLACKER_USB_MANUFACTURER_UNICODE=L\"%s\"'" % manufacturer,
