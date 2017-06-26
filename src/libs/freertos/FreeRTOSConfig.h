@@ -51,6 +51,8 @@
 #define configTIMER_QUEUE_LENGTH 10U
 #define configTIMER_TASK_STACK_DEPTH configMINIMAL_STACK_SIZE
 
+#define configIDLE_TASK_NAME ""
+
 #define configUSE_CO_ROUTINES 0
 
 #define INCLUDE_vTaskPrioritySet 0

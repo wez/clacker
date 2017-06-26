@@ -44,5 +44,4 @@ void launchTasks(void) {
   RowPins::setup();
   blinkerTask.start().panicIfError();
   lufa::LufaUSB::get().start();
-  logln(makeConstString("starting up!"), 123);
 }
