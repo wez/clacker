@@ -147,7 +147,7 @@ class Linkable(targets.Target):
         libs = []
         for d in deps:
             if not isinstance(d, library.Library):
-                print('* Nothing to build for %s' % d.full_name)
+                #  print('* Nothing to build for %s' % d.full_name)
                 continue
 
             for obj in self._build_library(d, outputs):
