@@ -328,12 +328,6 @@ LufaUSB& LufaUSB::get() {
   return usb;
 }
 
-LufaUSB::LufaUSB() : task_([] { LufaUSB::get().taskLoop(); }) {}
-
-void LufaUSB::start() {
-  task_.start();
-}
-
 void LufaUSB::tick() {
   // We need to disable interrupts here, otherwise something
   // in lufa gets unhappy and breaks the scheduler.
@@ -356,7 +350,7 @@ void LufaUSB::populateReport(USB_KeyboardReport_Data_t* ReportData) {
   ReportData->Modifier = pendingReport_.mods;
 }
 
-void LufaUSB::taskLoop() {
+void LufaUSB::run() {
   {
     CriticalSection disableInterrupts;
     USB_Init();

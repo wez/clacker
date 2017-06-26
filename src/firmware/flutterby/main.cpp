@@ -27,18 +27,22 @@ using Row2 = gpio::avr::OutputPin<gpio::avr::PortF, 1>;
 using Row3 = gpio::avr::OutputPin<gpio::avr::PortF, 0>;
 using RowPins = gpio::avr::OutputPins<Row0, Row1, Row2, Row3>;
 
-clacker::Task<> blinker([] {
-  while (true) {
-    Led::toggle();
-    delayMilliseconds(1000);
-    logln(makeConstString("bloop!"));
+struct blinker : public Task<blinker> {
+  void run() {
+    while (true) {
+      Led::toggle();
+      delayMilliseconds(1000);
+      logln(makeConstString("bloop!"));
+    }
   }
-});
+};
+
+blinker blinkerTask;
 
 void launchTasks(void) {
   Led::setup();
   RowPins::setup();
-  blinker.start().panicIfError();
+  blinkerTask.start().panicIfError();
   lufa::LufaUSB::get().start();
   logln(makeConstString("starting up!"), 123);
 }

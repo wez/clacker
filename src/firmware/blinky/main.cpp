@@ -18,21 +18,24 @@ using Led = clacker::gpio::avr::OutputPin<clacker::gpio::avr::PortC, 7>;
 #define HAVE_LED 1
 #endif
 
-clacker::Task<> blinker([] {
-  while (true) {
+struct blinker : public clacker::Task<blinker> {
+  void run() {
+    while (true) {
 #if HAVE_LED
-    Led::toggle();
+      Led::toggle();
 #else
-    printf("toggle\n");
+      printf("toggle\n");
 #endif
-    clacker::delayMilliseconds(1000);
+      clacker::delayMilliseconds(1000);
+    }
   }
-});
+};
+blinker blinkerTask;
 
 void launchTasks(void) {
 #if HAVE_LED
   Led::setup();
   Led::set();
 #endif
-  blinker.start().panicIfError();
+  blinkerTask.start().panicIfError();
 }

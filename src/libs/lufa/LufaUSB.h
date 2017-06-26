@@ -32,19 +32,17 @@ struct Command {
 
 static_assert(sizeof(Command) == 8, "packed ok");
 
-class LufaUSB {
-  Task<configMINIMAL_STACK_SIZE, 1> task_;
+class LufaUSB : public Task<LufaUSB, configMINIMAL_STACK_SIZE, 1> {
   Report pendingReport_;
-  LufaUSB();
+
+  void tick();
 
  public:
   using CommandQueue = Queue<Command, 3>;
 
   static LufaUSB& get();
-  void start();
-  void tick();
 
-  void taskLoop();
+  void run();
 
   void populateReport(USB_KeyboardReport_Data_t* ReportData);
 
