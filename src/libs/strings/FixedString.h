@@ -263,11 +263,47 @@ int snprintf(char* buf, size_t size, FixedString<Size>&& fmt, Args&&... args) {
 // the string contents in program memory; we need to perform some
 // preprocessor gymnastics to declare the static storage required
 // for this to work.
+// This magic can be difficult for the compiler to deal with:
+// using the statement-expression syntax is not supported within
+// lambda expressions.
+// Neither is the inline assembly properly supported there, leading
+// to parse errors.
+// The most portable way to return a synthesized static is using
+// an inline lambda expression but if we do that we cannot use
+// the assembly language tricks.
+// Why use assembly language tricks?  The default PROGMEM attribute
+// defeats the native string literal merging feature of the tool
+// chain, and we desire to eliminate duplicate strings.
+// We're drawing on the work in this post:
+// http://michael-buschbeck.github.io/arduino/2013/10/22/string-merging-pstr-percent-codes/
+#ifdef __AVR__
+#define makeConstString(literal)                           \
+  (__extension__({                                         \
+    PGM_P ptr;                                             \
+    asm volatile(                                          \
+        ".pushsection .progmem.data, \"SM\", @progbits, 1" \
+        "\n\t"                                             \
+        "0: .string " #literal                             \
+        "\n\t"                                             \
+        ".popsection"                                      \
+        "\n\t");                                           \
+    asm volatile(                                          \
+        "ldi %A0, lo8(0b)"                                 \
+        "\n\t"                                             \
+        "ldi %B0, hi8(0b)"                                 \
+        "\n\t"                                             \
+        : "=d"(ptr));                                      \
+    ::clacker::ProgMemString<sizeof(literal) - 1, char>(   \
+        ::clacker::makeProgMemIter(ptr));                  \
+  }))
+#else
 #define makeConstString(literal)                             \
   ::clacker::ProgMemString<sizeof(literal) - 1, char>([] {   \
     static const char _data[] __CLACKER_PROGMEM = (literal); \
     return ::clacker::makeProgMemIter(_data);                \
   }())
+
+#endif
 
 #ifdef __CLACKER_HOST_BOARD
 // Some glue to support testing with lest.
