@@ -4,6 +4,7 @@ Firmware(
     board=AVRBoard(mcu='atmega32u4', clock=8000000),
     deps=['src/libs/tasks:tasks', 'src/libs/progmem:progmem', ':matrix',
           'src/libs/lufa:lufa',
+          'src/libs/sx1509:sx1509',
           ],
     srcs=['main.cpp'])
 
