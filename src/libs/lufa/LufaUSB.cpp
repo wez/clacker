@@ -22,7 +22,17 @@
 #include "LufaUSB.h"
 #include <LUFA/Drivers/USB/USB.h>
 #include "lufa_data.h"
+#include "src/libs/tasks/Bootloader.h"
 namespace clacker {
+
+// This is present to provide a way to safely shutdown USB when software
+// initiates a reset
+void panicShutdownUSB() {
+  USB_Disable();
+  cli();
+  _delay_ms(1000);
+}
+
 namespace lufa {
 
 enum StringDescriptors {
@@ -310,6 +320,13 @@ extern "C" void EVENT_CDC_Device_ControLineStateChanged(
   // This is how we can tell if the host is connected to the port
   bool HostReady = (CDCInterfaceInfo->State.ControlLineStates.HostToDevice &
                     CDC_CONTROL_LINE_OUT_DTR) != 0;
+
+  if (!HostReady && CDCInterfaceInfo->State.LineEncoding.BaudRateBPS == 1200) {
+    // If the host opens and closes the serial port at 1200 baud, that
+    // is the arduino compatible way to request that we enter the
+    // bootloader.  So let's do it!
+    bootloader::enterBootloader();
+  }
 }
 
 extern "C" void CALLBACK_HID_Device_ProcessHIDReport(

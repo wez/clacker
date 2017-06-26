@@ -8,10 +8,22 @@ import re
 import subprocess
 import shlex
 import time
+import serial
 
 from . import arduino
 from . import library
 from . import projectdir
+
+
+def reset_arduino_on_port(port):
+    ''' try to persuade the device to jump to the bootloader
+        (this doesn't seem to work with all hardware) '''
+    ser = serial.Serial(port, 1200)
+    ser.close()
+    # If we got here, then we need to give the firmware a few
+    # moments to get into the bootloader and be ready for the
+    # upload
+    time.sleep(3)
 
 
 def _cmd_split(args):
@@ -329,9 +341,7 @@ class FQBN(Board):
                     prefs['serial.port.file'] = device
 
                 if device:
-                    # try to persuade the device to jump to the bootloader
-                    # (this doesn't seem to work with all hardware)
-                    subprocess.call(['stty', '-f', device, '1200'])
+                    reset_arduino_on_port(device)
                 elif not pref_serial_port:
                     print('Waiting for device to appear')
                     time.sleep(1)
@@ -403,5 +413,6 @@ class AVRBoard(Board):
             '-b57600',
             '-D']
         if port:
+            reset_arduino_on_port(port)
             cmd.append('-P%s' % port)
         subprocess.check_call(cmd)
