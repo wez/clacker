@@ -373,10 +373,31 @@ void LufaUSB::run() {
     USB_Init();
   }
 
+  auto lastState = USB_DeviceState;
+  uint16_t delay = 0;
+  TickType_t stateTick = xTaskGetTickCount();
+
   while (true) {
     Command cmd;
 
-    if (queue.recv(cmd, 0).hasValue()) {
+    auto now = xTaskGetTickCount();
+    if (lastState != USB_DeviceState) {
+      lastState = USB_DeviceState;
+      stateTick = now;
+      delay = 0;
+    }
+    if (delay == 0 && (lastState == DEVICE_STATE_Unattached ||
+                       lastState == DEVICE_STATE_Suspended)) {
+      if ((now - stateTick) > TickType_t{10000} / portTICK_PERIOD_MS) {
+        // If we're not connected to the host then we don't need to
+        // check for things as frequently.   This will allow us to
+        // sleep for longer.  We give it a few seconds grace to
+        // de-bounce around plug/unplug events
+        delay = 1000;
+      }
+    }
+
+    if (queue.recv(cmd, delay).hasValue()) {
       // Do something with cmd
       switch (cmd.CommandType) {
         case KeyReport:
@@ -386,7 +407,6 @@ void LufaUSB::run() {
     }
 
     tick();
-
     taskYIELD();
   }
 }

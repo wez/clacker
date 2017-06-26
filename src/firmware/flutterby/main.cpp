@@ -90,7 +90,7 @@ scanner scannerTask;
 
 void launchTasks(void) {
   Led::setup();
+  lufa::LufaUSB::get().start().panicIfError();
   scannerTask.start().panicIfError();
   blinkerTask.start().panicIfError();
-  lufa::LufaUSB::get().start().panicIfError();
 }

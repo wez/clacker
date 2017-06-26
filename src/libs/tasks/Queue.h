@@ -15,19 +15,18 @@ class Queue {
 #endif
 
  public:
-  freertos::BoolResult setup() {
+  Queue() {
 #if configSUPPORT_STATIC_ALLOCATION == 1
     h_ = xQueueCreateStatic(
         Size, sizeof(T), reinterpret_cast<uint8_t*>(buffer_), &q_);
-    return freertos::BoolResult::Ok();
 #else
     h_ = xQueueCreate(Size, sizeof(T));
-    return freertos::boolResult(
-        h_ == nullptr ? errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY : pdTRUE);
+    if (!h_) {
+      panic(makeConstString("OOM in xQueueCreate"));
+    }
 #endif
   }
 
-  Queue() = default;
   Queue(const Queue&) = delete;
   Queue(Queue&&) = delete;
 
