@@ -30,7 +30,30 @@ hid_labels = {
     'ctrl': 'HID_KEYBOARD_LEFT_CONTROL',
     'space': 'HID_KEYBOARD_SPACEBAR',
     '-': 'HID_KEYBOARD_MINUS_AND_UNDERSCORE',
+    '_': 'HID_KEYBOARD_MINUS_AND_UNDERSCORE',
     '=': 'HID_KEYBOARD_EQUALS_AND_PLUS',
+    '+': 'HID_KEYBOARD_EQUALS_AND_PLUS',
+    '[': 'HID_KEYBOARD_LEFT_BRACKET_AND_LEFT_CURLY_BRACE',
+    '{': 'HID_KEYBOARD_LEFT_BRACKET_AND_LEFT_CURLY_BRACE',
+    ']': 'HID_KEYBOARD_RIGHT_BRACKET_AND_RIGHT_CURLY_BRACE',
+    '}': 'HID_KEYBOARD_RIGHT_BRACKET_AND_RIGHT_CURLY_BRACE',
+    'bksp': 'HID_KEYBOARD_DELETE',
+    'backspace': 'HID_KEYBOARD_DELETE',
+    'del': 'HID_KEYBOARD_DELETE_FORWARD',
+    'meta': 'HID_KEYBOARD_LEFT_ALT',
+    'super': 'HID_KEYBOARD_LEFT_GUI',
+    '|': 'HID_KEYBOARD_BACKSLASH_AND_PIPE',
+    '\\': 'HID_KEYBOARD_BACKSLASH_AND_PIPE',
+    ':': 'HID_KEYBOARD_SEMICOLON_AND_COLON',
+    ';': 'HID_KEYBOARD_SEMICOLON_AND_COLON',
+    '"': 'HID_KEYBOARD_QUOTE_AND_DOUBLEQUOTE',
+    '\'': 'HID_KEYBOARD_QUOTE_AND_DOUBLEQUOTE',
+    ',': 'HID_KEYBOARD_COMMA_AND_LESS_THAN',
+    '<': 'HID_KEYBOARD_COMMA_AND_LESS_THAN',
+    '.': 'HID_KEYBOARD_PERIOD_AND_GREATER_THAN',
+    '>': 'HID_KEYBOARD_PERIOD_AND_GREATER_THAN',
+    '?': 'HID_KEYBOARD_SLASH_AND_QUESTION_MARK',
+    '/': 'HID_KEYBOARD_SLASH_AND_QUESTION_MARK',
 }
 for x in 'abcdefghijklmnopqrstuvwxyz':
     hid_labels[x] = 'HID_KEYBOARD_%s_AND_%s' % (x.upper(), x.upper())
@@ -102,7 +125,7 @@ class KeyMatrix(targets.Target):
                 rows = max(rows, int(math.ceil(key.y)))
                 cols = max(cols, int(math.ceil(key.x)))
 
-        maxCode = rows * cols
+        maxCode = rows * (1 + cols)
         hfile = os.path.join(outputs, '%s-matrix.h' % self.name)
         with filesystem.WriteFileIfChanged(hfile) as f:
             f.write('// %s - %s\n' % (self.name, layout.name()))
@@ -137,23 +160,23 @@ using Matrix = KeyMatrix<{rows}, {cols}>;
                         r = parse_num(m.group(1))
                         c = parse_num(m.group(2))
                         rhs = hid_labels.get(label, 'HID_KEYBOARD_NO_EVENT')
-                        scancode = (r * cols) + c + 1
+                        if rhs == 'HID_KEYBOARD_NO_EVENT':
+                            print('need %s' % label)
+                        scancode = (r * (1 + cols)) + c + 1
                         kmap[scancode] = rhs
                     else:
                         print(physk.shortLabel(), ' no match', label)
 
                 f.write('''
-    const uint16_t keyMapData[%d]
+const uint16_t keyMapData[%d]
 #ifdef PROGMEM
         PROGMEM
 #endif
         = {\n''' % maxCode)
-                for scancode in range(1, rows * cols):
+                for scancode in range(1, 1 + maxCode):
                     f.write('\t%s,\n' % kmap.get(
                         scancode, 'HID_KEYBOARD_NO_EVENT'))
-                f.write('''
-    };
-''')
+                f.write('};\n')
             f.write('\n}\n')
 
         projectdir.set(outputs)
