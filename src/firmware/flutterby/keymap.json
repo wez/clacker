@@ -1,0 +1,411 @@
+[
+  {
+    "name": "Flutterby",
+    "author": "Wez Furlong",
+    "notes": "# Motivation\n\nI wanted something very close to the ergodox but in a form factor that would work with my laptop.\nThe goals were:\n\n* Must fit over the keyboard of a 13\" macbook pro\n* Ortholinear layout with thumb clusters\n* Avoid shoulder tension by increasing separation\n\nThis particular layout has the halves each rotated 15 degrees from vertical; this happens to feel more comfortable for my shoulder separation than the 10 degrees of the Atreus.\n\nThe thumb clusters are similar to the ergodox but are a bit more compact; it doesn't require such an extreme thumb stretch when you are reaching from the home row position.  Similarly, the key positioning and layout on the halves is very similar to the ergodox, but eliminates a couple of the outlying keys to avoid extreme hand/finger stretches and to reduce the footprint of the board.\n\n## Some technical notes\n\nThe left half has its origin at the key that would be to the right of the copy key (that's the key to the right of the top right key of the left half).\nThe right half has its origin at the key that is at the top left of the right half (the paste key).\n\nFor the thumb clusters, the origins are similar: the origin is the inside corner of the L shape.\n\nPlacing the origins in this way makes it simpler to rotate the halves and make sure that they line up: the ry values of the left and right halves should be the same.",
+    "switchMount": "cherry",
+    "switchBrand": "cherry",
+    "switchType": "MX1A-G1xx",
+    "plate": true
+  },
+  [
+    {
+      "r": 15,
+      "rx": 8,
+      "ry": 1.125,
+      "x": -4,
+      "c": "#c4c8c5",
+      "a": 1
+    },
+    "#\n3\n\n\nF3"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -5
+    },
+    "@\n2\n\n\nF2",
+    {
+      "x": 1
+    },
+    "$\n4\n\n\nF4"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -2
+    },
+    "%\n5\n\n\nF5"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -6
+    },
+    "!\n1\n\n\nF1",
+    {
+      "x": 4,
+      "a": 7
+    },
+    "Copy"
+  ],
+  [
+    {
+      "y": -0.375,
+      "x": -4,
+      "a": 3
+    },
+    "E\n\n\n\nEnd"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -5,
+      "a": 7
+    },
+    "W",
+    {
+      "x": 1
+    },
+    "R"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -2
+    },
+    "T"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -7,
+      "c": "#009057"
+    },
+    "Tab",
+    {
+      "c": "#c4c8c5"
+    },
+    "Q",
+    {
+      "x": 4,
+      "a": 5
+    },
+    "{\n["
+  ],
+  [
+    {
+      "y": -0.375,
+      "x": -4,
+      "a": 3
+    },
+    "D\n\n\n\nPgDn"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -5,
+      "a": 7
+    },
+    "S",
+    {
+      "x": 1,
+      "n": true
+    },
+    "F"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -2
+    },
+    "G"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -7,
+      "c": "#cd2f2c"
+    },
+    "Esc",
+    {
+      "c": "#c4c8c5",
+      "a": 3
+    },
+    "A\n\n\n\nHome",
+    {
+      "x": 4,
+      "a": 0
+    },
+    "\n\n<i class='kb kb-Unicode-Screen-Dim'></i>\n\n<i class='kb kb-Multimedia-Volume-Down-1'></i>\n\n\n\n_\n\n-"
+  ],
+  [
+    {
+      "y": -0.375,
+      "x": -4,
+      "a": 7
+    },
+    "C"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -5
+    },
+    "X",
+    {
+      "x": 1
+    },
+    "V"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -2
+    },
+    "B"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": -7,
+      "c": "#909596",
+      "a": 3
+    },
+    "Shift\n\n\n\n~\n`",
+    {
+      "c": "#c4c8c5",
+      "a": 7
+    },
+    "Z"
+  ],
+  [
+    {
+      "r": 30,
+      "rx": 6.25,
+      "ry": 5.375,
+      "y": -1,
+      "c": "#ffc100"
+    },
+    "Ctrl"
+  ],
+  [
+    {
+      "x": -1,
+      "c": "#009057"
+    },
+    "Lower",
+    {
+      "c": "#f16f3b"
+    },
+    "Hyper"
+  ],
+  [
+    {
+      "x": -1,
+      "c": "#009057"
+    },
+    "BkSp",
+    "Del"
+  ],
+  [
+    {
+      "r": -30,
+      "rx": 10.375,
+      "y": -1,
+      "x": -1,
+      "c": "#ffc100"
+    },
+    "Meta"
+  ],
+  [
+    {
+      "x": -1,
+      "c": "#f16f3b"
+    },
+    "Super",
+    {
+      "c": "#009057"
+    },
+    "Raise"
+  ],
+  [
+    {
+      "x": -1,
+      "c": "#0075ad"
+    },
+    "Enter",
+    {
+      "c": "#909596"
+    },
+    "Space"
+  ],
+  [
+    {
+      "r": -15,
+      "rx": 8.625,
+      "ry": 1.125,
+      "x": 3,
+      "c": "#c4c8c5",
+      "a": 1
+    },
+    "*\n8\n\n\nF8"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": 2
+    },
+    "&\n7\n\n\nF7",
+    {
+      "x": 1
+    },
+    "(\n9\n\n\nF9"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": 1
+    },
+    "^\n6\n\n\nF6"
+  ],
+  [
+    {
+      "y": -0.875,
+      "a": 7
+    },
+    "Paste",
+    {
+      "x": 4,
+      "a": 1
+    },
+    ")\n0\n\n\nF10"
+  ],
+  [
+    {
+      "y": -0.375,
+      "x": 3,
+      "a": 7
+    },
+    "I"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": 2,
+      "a": 3
+    },
+    "U\n\n\n\nPgUp",
+    {
+      "x": 1,
+      "a": 7
+    },
+    "O"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": 1
+    },
+    "Y"
+  ],
+  [
+    {
+      "y": -0.875,
+      "a": 5
+    },
+    "}\n]",
+    {
+      "x": 4,
+      "a": 7
+    },
+    "P",
+    {
+      "a": 5
+    },
+    "|\n\\"
+  ],
+  [
+    {
+      "y": -0.375,
+      "x": 3,
+      "a": 4
+    },
+    "\n\n<i class='kb kb-Arrows-Up'></i>\n\n\n\n\n\n\nK"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": 2,
+      "n": true
+    },
+    "\n\n<i class='kb kb-Arrows-Down'></i>\n\n\n\n\n\n\nJ",
+    {
+      "x": 1
+    },
+    "\n\n<i class='kb kb-Arrows-Right'></i>\n\n\n\n\n\n\nL"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": 1
+    },
+    "\n\n<i class='kb kb-Arrows-Left'></i>\n\n\n\n\n\n\nH"
+  ],
+  [
+    {
+      "y": -0.875
+    },
+    "\n\n<i class='kb kb-Unicode-Screen-Bright'></i>\n\n<i class='kb kb-Multimedia-Volume-Up-1'></i>\n\n\n\n+\n\n=",
+    {
+      "x": 4,
+      "a": 5
+    },
+    ":\n;",
+    {
+      "a": 1
+    },
+    "\"\n'\n\n\n<i class='kb kb-Multimedia-Play-Pause'></i>"
+  ],
+  [
+    {
+      "y": -0.375,
+      "x": 3
+    },
+    "<\n,\n\n\n<i class='kb kb-Multimedia-Rewind'></i>"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": 2,
+      "a": 7
+    },
+    "M",
+    {
+      "x": 1,
+      "a": 1
+    },
+    ">\n.\n\n\n<i class='kb kb-Multimedia-FastForwar'></i>"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": 1,
+      "a": 7
+    },
+    "N"
+  ],
+  [
+    {
+      "y": -0.875,
+      "x": 5,
+      "a": 5
+    },
+    "?\n/",
+    {
+      "c": "#909596",
+      "a": 7
+    },
+    "Shift"
+  ]
+]

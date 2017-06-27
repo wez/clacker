@@ -62,8 +62,17 @@ struct scanner : public Task<scanner> {
       }
     }
 
-    // TODO: this is a good point to run the keyState through the keymap
+    // this is a good point to run the keyState through the keymap
     // and emit the USB keycodes
+    lufa::Command cmd;
+    cmd.CommandType = lufa::KeyReport;
+    cmd.u.report.clear();
+    for (auto& k : keyState) {
+      if (k.scanCode != 0 && k.down) {
+        cmd.u.report.addKey(progMemLoad(keyMapData + k.scanCode - 1));
+      }
+    }
+    lufa::LufaUSB::get().queue.send(cmd);
   }
 
   void logMatrixState() {

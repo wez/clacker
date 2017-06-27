@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import math
+import re
 import os
 
 from . import kle
@@ -9,6 +10,32 @@ from . import library
 from . import projectdir
 from . import targets
 from . import filesystem
+
+hid_labels = {
+    '1': 'HID_KEYBOARD_1_AND_EXCLAMATION_POINT',
+    '2': 'HID_KEYBOARD_2_AND_AT',
+    '3': 'HID_KEYBOARD_3_AND_POUND',
+    '4': 'HID_KEYBOARD_4_AND_DOLLAR',
+    '5': 'HID_KEYBOARD_5_AND_PERCENT',
+    '6': 'HID_KEYBOARD_6_AND_CARAT',
+    '7': 'HID_KEYBOARD_7_AND_AMPERSAND',
+    '8': 'HID_KEYBOARD_8_AND_ASTERISK',
+    '9': 'HID_KEYBOARD_9_AND_LEFT_PAREN',
+    '0': 'HID_KEYBOARD_0_AND_RIGHT_PAREN',
+    'enter': 'HID_KEYBOARD_ENTER',
+    'escape': 'HID_KEYBOARD_ESCAPE',
+    'esc': 'HID_KEYBOARD_ESCAPE',
+    'tab': 'HID_KEYBOARD_TAB',
+    'shift': 'HID_KEYBOARD_LEFT_SHIFT',
+    'ctrl': 'HID_KEYBOARD_LEFT_CONTROL',
+    'space': 'HID_KEYBOARD_SPACEBAR',
+    '-': 'HID_KEYBOARD_MINUS_AND_UNDERSCORE',
+    '=': 'HID_KEYBOARD_EQUALS_AND_PLUS',
+}
+for x in 'abcdefghijklmnopqrstuvwxyz':
+    hid_labels[x] = 'HID_KEYBOARD_%s_AND_%s' % (x.upper(), x.upper())
+for n, x in enumerate(')!@#$%^&*('):
+    hid_labels[x] = hid_labels[str(n)]
 
 
 class KeyLayout(object):
@@ -39,10 +66,13 @@ class KeyMatrix(targets.Target):
 
     '''
 
-    def __init__(self, name, layout, rows=None, cols=None):
+    def __init__(self, name, layout, keymap=None, rows=None, cols=None):
         super(KeyMatrix, self).__init__(name)
         assert(isinstance(layout, KeyLayout))
         self.layout = layout
+        if keymap:
+            assert(isinstance(keymap, KeyLayout))
+            self.keymap = keymap
         self.lib = None
         self.rows = rows
         self.cols = cols
@@ -72,15 +102,59 @@ class KeyMatrix(targets.Target):
                 rows = max(rows, int(math.ceil(key.y)))
                 cols = max(cols, int(math.ceil(key.x)))
 
+        maxCode = rows * cols
         hfile = os.path.join(outputs, '%s-matrix.h' % self.name)
         with filesystem.WriteFileIfChanged(hfile) as f:
             f.write('// %s - %s\n' % (self.name, layout.name()))
             f.write('''
+#include <stdint.h>
+#ifdef __AVR__
+#include <avr/pgmspace.h>
+#endif
 #include "src/libs/keymatrix/KeyMatrix.h"
+#include "src/libs/keyprocessor/HIDTables.h"
 namespace clacker {{
 using Matrix = KeyMatrix<{rows}, {cols}>;
-}}
-            '''.format(rows=rows, cols=cols))
+            '''.format(rows=rows, cols=cols, maxcode=maxCode))
+
+            if self.keymap:
+                physkeys = list(layout.keys())
+                keys = list(self.keymap.layout.keys())
+                kmap = {}
+                for physk, mkey in zip(physkeys, keys):
+                    # parse the physical key label into a matrix coordinate
+                    m = re.match('k([0-9a-f]+)_?([0-9a-f]+)$',
+                                 physk.shortLabel())
+
+                    def parse_num(x):
+                        try:
+                            return int(x)
+                        except ValueError:
+                            return int(x, 16)
+
+                    label = mkey.shortLabel().lower()
+                    if m:
+                        r = parse_num(m.group(1))
+                        c = parse_num(m.group(2))
+                        rhs = hid_labels.get(label, 'HID_KEYBOARD_NO_EVENT')
+                        scancode = (r * cols) + c + 1
+                        kmap[scancode] = rhs
+                    else:
+                        print(physk.shortLabel(), ' no match', label)
+
+                f.write('''
+    const uint16_t keyMapData[%d]
+#ifdef PROGMEM
+        PROGMEM
+#endif
+        = {\n''' % maxCode)
+                for scancode in range(1, rows * cols):
+                    f.write('\t%s,\n' % kmap.get(
+                        scancode, 'HID_KEYBOARD_NO_EVENT'))
+                f.write('''
+    };
+''')
+            f.write('\n}\n')
 
         projectdir.set(outputs)
         return library.Library(name='matrix-lib')

@@ -21,6 +21,10 @@ struct Report {
       }
     }
   }
+
+  void clear() {
+    memset(this, 0, sizeof(*this));
+  }
 };
 
 struct Command {

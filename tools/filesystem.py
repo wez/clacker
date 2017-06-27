@@ -41,5 +41,6 @@ class WriteFileIfChanged(StringIO.StringIO, object):
                 return
 
             f.seek(0)
+            f.truncate()
             f.write(towrite)
             f.truncate()

@@ -12,4 +12,5 @@ KeyMatrix(
     name='matrix',
     rows=4,
     cols=15,
-    layout=KeyLayout('flutterby.json'))
+    layout=KeyLayout('flutterby.json'),
+    keymap=KeyLayout('keymap.json'))
