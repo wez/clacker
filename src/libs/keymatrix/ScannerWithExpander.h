@@ -22,7 +22,7 @@ class MatrixScannerWithExpander {
     RowPins::write(0);
   }
 
-  bool scanMatrix() {
+  bool scanMatrix() __attribute__((noinline)) {
     memcpy(prior_.rows, matrix_.rows, sizeof(prior_.rows));
     memset(matrix_.rows, 0, sizeof(matrix_.rows));
     bool changed = false;
