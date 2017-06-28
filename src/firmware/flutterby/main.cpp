@@ -32,17 +32,111 @@ using RowPins = gpio::avr::OutputPins<Row0, Row1, Row2, Row3>;
 
 using Scanner = MatrixScannerWithExpander<Matrix, RowPins, SX1509>;
 
+enum MacroIds {
+  MacroCopy,
+  MacroPaste,
+};
+namespace clacker {
+ProgMemIter<uint8_t> lookupMacroDefinition(uint16_t macroid) {
+  switch (macroid) {
+    case MacroCopy:
+      static const uint8_t copy[] PROGMEM = {MacroKeyDown,
+                                             HID_KEYBOARD_LEFT_GUI,
+                                             MacroKeyDown,
+                                             HID_KEYBOARD_C_AND_C,
+                                             MacroEnd};
+      return copy;
+
+    case MacroPaste:
+      static const uint8_t paste[] PROGMEM = {MacroKeyDown,
+                                              HID_KEYBOARD_LEFT_GUI,
+                                              MacroKeyDown,
+                                              HID_KEYBOARD_V_AND_V,
+                                              MacroEnd};
+      return paste;
+  }
+  return emptyMacroDefinition();
+}
+}
+
+const KeyEntry localKeyMapData[64] PROGMEM = {
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_1_AND_EXCLAMATION_POINT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_2_AND_AT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_3_AND_POUND),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_4_AND_DOLLAR),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_5_AND_PERCENT),
+    KeyEntry::FunctionKeyEntry(MacroKey, MacroCopy),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_CONTROL),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_ALT),
+    KeyEntry::FunctionKeyEntry(MacroKey, MacroPaste),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_6_AND_CARAT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_7_AND_AMPERSAND),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_8_AND_ASTERISK),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_9_AND_LEFT_PAREN),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_0_AND_RIGHT_PAREN),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_TAB),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Q_AND_Q),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_W_AND_W),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_E_AND_E),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_R_AND_R),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_T_AND_T),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_BRACKET_AND_LEFT_CURLY_BRACE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_GUI),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_RIGHT_BRACKET_AND_RIGHT_CURLY_BRACE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Y_AND_Y),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_U_AND_U),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_I_AND_I),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_O_AND_O),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_P_AND_P),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_BACKSLASH_AND_PIPE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_ESCAPE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_A_AND_A),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_S_AND_S),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_D_AND_D),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_F_AND_F),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_G_AND_G),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_MINUS_AND_UNDERSCORE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DELETE_FORWARD),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_ENTER),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_EQUALS_AND_PLUS),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_H_AND_H),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_J_AND_J),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_K_AND_K),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_L_AND_L),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SEMICOLON_AND_COLON),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_QUOTE_AND_DOUBLEQUOTE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Z_AND_Z),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_X_AND_X),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_C_AND_C),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_V_AND_V),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_B_AND_B),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DELETE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SPACEBAR),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_N_AND_N),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_M_AND_M),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_COMMA_AND_LESS_THAN),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_PERIOD_AND_GREATER_THAN),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SLASH_AND_QUESTION_MARK),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
+};
+
 struct blinker : public Task<blinker> {
   void run() {
     while (true) {
       Led::toggle();
       delayMilliseconds(1000);
-      logln(makeConstString("bloop!"));
+      // logln(makeConstString("bloop!"));
     }
   }
 };
 
-struct scanner : public Task<scanner> {
+struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
   Scanner scanner;
   KeyboardState<16, 200 / portTICK_PERIOD_MS> keyState;
 
@@ -67,10 +161,11 @@ struct scanner : public Task<scanner> {
     lufa::Report report;
     report.clear();
     auto& usb = lufa::LufaUSB::get();
+    bool haveMacro = false;
 
     for (auto& k : keyState) {
       if (k.scanCode != 0 && k.down) {
-        auto action = progMemLoad(keyMapData + k.scanCode - 1);
+        auto action = progMemLoad(localKeyMapData + k.scanCode - 1);
 
         switch (action.basic.type) {
           case BasicKey:
@@ -94,11 +189,90 @@ struct scanner : public Task<scanner> {
           case SystemKey:
             usb.systemKey(action.extra.usage);
             break;
+          case MacroKey:
+            haveMacro = true;
+            break;
+        }
+      }
+    }
+
+    if (haveMacro) {
+      for (auto& k : keyState) {
+        if (k.scanCode != 0 && k.down) {
+          auto action = progMemLoad(localKeyMapData + k.scanCode - 1);
+
+          switch (action.basic.type) {
+            case MacroKey:
+              runMacro(report, action.func.funcid);
+              break;
+          }
         }
       }
     }
 
     usb.basicReport(report);
+  }
+
+  void runMacro(const lufa::Report& report, uint16_t macroid) {
+    auto macroReport = report;
+    auto iter = lookupMacroDefinition(macroid);
+    auto& usb = lufa::LufaUSB::get();
+    bool needReport = false;
+    while (true) {
+      auto macro = *iter;
+      ++iter;
+      switch (macro) {
+        case MacroKeyDown:
+        case MacroKeyToggle:
+        case MacroKeyUp: {
+          auto key = *iter;
+          ++iter;
+
+          if (key >= HID_KEYBOARD_LEFT_CONTROL &&
+              key <= HID_KEYBOARD_RIGHT_GUI) {
+            // Convert to modifier bits
+            auto mask = 1 << (key - HID_KEYBOARD_LEFT_CONTROL);
+
+            if (macro == MacroKeyToggle) {
+              macro = (macroReport.mods & mask) ? MacroKeyUp : MacroKeyDown;
+            }
+
+            if (macro == MacroKeyDown) {
+              macroReport.mods |= mask;
+            } else {
+              macroReport.mods &= ~mask;
+            }
+            needReport = true;
+            continue;
+          }
+
+          if (macro == MacroKeyDown) {
+            macroReport.addKey(key);
+          } else if (macro == MacroKeyUp) {
+            macroReport.clearKey(key);
+          } else {
+            macroReport.toggleKey(key);
+          }
+          usb.basicReport(macroReport);
+          // Allow enough time for the device on the other end to
+          // have registered the keypress
+          delayMilliseconds(32);
+          needReport = false;
+          break;
+        }
+        case MacroEnd:
+          if (needReport) {
+            usb.basicReport(macroReport);
+            // Allow enough time for the device on the other end to
+            // have registered the keypress
+            delayMilliseconds(32);
+          }
+          return;
+
+        default:
+          return;
+      }
+    }
   }
 
   void logMatrixState() {

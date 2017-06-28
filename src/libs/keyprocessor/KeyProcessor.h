@@ -1,4 +1,7 @@
 #pragma once
+#include <stdint.h>
+#include "src/libs/progmem/ProgMem.h"
+
 namespace clacker {
 
 // A KeyProcessor keeps track of the state of a fixed number of keys.
@@ -121,6 +124,7 @@ enum KeyEntryType {
   ConsumerKey,
   SystemKey,
   FunctionKey,
+  MacroKey,
 };
 
 union KeyEntry {
@@ -147,13 +151,13 @@ union KeyEntry {
         : type(t), usage(usage) {}
   } extra;
 
-  // FunctionKey
+  // FunctionKey or MacroKey
   struct FunctionKeyEntry {
     unsigned type : 4;
     unsigned funcid : 12;
 
-    constexpr FunctionKeyEntry(uint16_t funcid)
-        : type(FunctionKey), funcid(funcid) {}
+    constexpr FunctionKeyEntry(enum KeyEntryType t, uint16_t funcid)
+        : type(t), funcid(funcid) {}
   } func;
 
   constexpr KeyEntry() : raw(0) {}
@@ -161,4 +165,35 @@ union KeyEntry {
   constexpr KeyEntry(ExtraKeyEntry b) : extra(b) {}
   constexpr KeyEntry(FunctionKeyEntry b) : func(b) {}
 };
+
+// An application-provided function to execute a user-defined function
+extern void performUserDefinedFunction(uint16_t fnid);
+
+ProgMemIter<uint8_t> emptyMacroDefinition();
+
+// These codes specify how to interpret the USB key codes that are
+// part of the macro stream.
+// eg: {MacroKeyDown, HID_KEYBOARD_C, MacroKeyUp, HID_KEYBOARD_C, MacroEnd}
+// sends the sequence of C being pressed and released.  Note that the
+// macro renderer will restore the key state to those keys that are depressed
+// once it reaches the end of the macro stream, so you do not need to
+// explicitly add MacroKeyUp entries unless you need the macro to release the
+// key as part of its execution.
+// Note that the numeric values chosen for this enum were selected to
+// avoid collisions with the HID_KEYBOARD_XXX namespace.
+enum MacroKeyDisposition {
+  // Ends a macro sequence
+  MacroEnd = 0,
+  // The HID Keyboard code that follows is pressed
+  MacroKeyDown = 1,
+  // The HID Keyboard code that follows is released
+  MacroKeyUp = 2,
+  // The HID Keyboard code that follows is switched between
+  // down <-> up
+  MacroKeyToggle = 3,
+};
+
+// An application-provided function to return an iterator to the specified
+// macro sequence.
+extern ProgMemIter<uint8_t> lookupMacroDefinition(uint16_t macroid);
 }

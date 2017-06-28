@@ -14,13 +14,34 @@ struct Report {
   uint8_t mods;
   uint8_t keys[6];
 
-  void addKey(uint8_t key) {
+  void addKey(uint8_t key) __attribute__((noinline)) {
     for (auto& k : keys) {
       if (k == 0) {
         k = key;
         return;
       }
     }
+  }
+
+  void clearKey(uint8_t key) __attribute__((noinline)) {
+    for (auto& k : keys) {
+      if (k == key) {
+        k = 0;
+        return;
+      }
+    }
+  }
+
+  void toggleKey(uint8_t key) __attribute__((noinline)) {
+    for (auto& k : keys) {
+      if (k == key) {
+        k = 0;
+        return;
+      }
+    }
+    // If we get here, the key was not pressed so to toggle it
+    // we need to add it now
+    addKey(key);
   }
 
   void clear() {
@@ -42,7 +63,7 @@ struct Command {
 } __attribute__((packed));
 
 class LufaUSB : public Task<LufaUSB, configMINIMAL_STACK_SIZE, 1> {
-  using CommandQueue = Queue<Command, 3>;
+  using CommandQueue = Queue<Command, 8>;
   CommandQueue queue_;
   Report pendingReport_;
 #if 0

@@ -190,4 +190,4 @@ const KeyEntry keyMapData[%d]
         return library.Library(name='matrix-lib')
 
     def get_deps(self):
-        return [self._compute_lib()]
+        return [self._compute_lib(), 'src/libs/keyprocessor:keyprocessor']
