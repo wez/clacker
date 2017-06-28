@@ -41,7 +41,10 @@ hid_labels = {
     'backspace': 'HID_KEYBOARD_DELETE',
     'del': 'HID_KEYBOARD_DELETE_FORWARD',
     'meta': 'HID_KEYBOARD_LEFT_ALT',
+    'alt': 'HID_KEYBOARD_LEFT_ALT',
     'super': 'HID_KEYBOARD_LEFT_GUI',
+    'gui': 'HID_KEYBOARD_LEFT_GUI',
+    'windows': 'HID_KEYBOARD_LEFT_GUI',
     '|': 'HID_KEYBOARD_BACKSLASH_AND_PIPE',
     '\\': 'HID_KEYBOARD_BACKSLASH_AND_PIPE',
     ':': 'HID_KEYBOARD_SEMICOLON_AND_COLON',
@@ -57,6 +60,46 @@ hid_labels = {
     'copy': 'HID_KEYBOARD_COPY',
     'paste': 'HID_KEYBOARD_PASTE',
     'hyper': 'KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT, Hyper)',
+    'f1': 'HID_KEYBOARD_F1',
+    'f2': 'HID_KEYBOARD_F2',
+    'f3': 'HID_KEYBOARD_F3',
+    'f4': 'HID_KEYBOARD_F4',
+    'f5': 'HID_KEYBOARD_F5',
+    'f6': 'HID_KEYBOARD_F6',
+    'f7': 'HID_KEYBOARD_F7',
+    'f8': 'HID_KEYBOARD_F8',
+    'f9': 'HID_KEYBOARD_F9',
+    'f10': 'HID_KEYBOARD_F10',
+    'f11': 'HID_KEYBOARD_F11',
+    'f12': 'HID_KEYBOARD_F12',
+    'f13': 'HID_KEYBOARD_F13',
+    'f14': 'HID_KEYBOARD_F14',
+    'f15': 'HID_KEYBOARD_F15',
+    'f16': 'HID_KEYBOARD_F16',
+    'f17': 'HID_KEYBOARD_F17',
+    'f18': 'HID_KEYBOARD_F18',
+    'f19': 'HID_KEYBOARD_F19',
+    'f20': 'HID_KEYBOARD_F20',
+    'f21': 'HID_KEYBOARD_F21',
+    'f22': 'HID_KEYBOARD_F22',
+    'f23': 'HID_KEYBOARD_F23',
+    'f24': 'HID_KEYBOARD_F24',
+    'end': 'HID_KEYBOARD_END',
+    'home': 'HID_KEYBOARD_HOME',
+    'pgdn': 'HID_KEYBOARD_PAGE_DOWN',
+    'pgup': 'HID_KEYBOARD_PAGE_UP',
+    'vol-': 'HID_KEYBOARD_VOLUME_DOWN',
+    'vol+': 'HID_KEYBOARD_VOLUME_UP',
+    'up': 'HID_KEYBOARD_UP_ARROW',
+    'down': 'HID_KEYBOARD_DOWN_ARROW',
+    'left': 'HID_KEYBOARD_LEFT_ARROW',
+    'right': 'HID_KEYBOARD_RIGHT_ARROW',
+    '`': 'HID_KEYBOARD_GRAVE_ACCENT_AND_TILDE',
+    'play': 'HID_CONSUMER_PLAY_SLASH_PAUSE',
+    'track+': 'HID_CONSUMER_SCAN_NEXT_TRACK',
+    'track-': 'HID_CONSUMER_SCAN_PREVIOUS_TRACK',
+    'l1': 'KeyEntry::LayerKeyEntry(1)',
+    'l2': 'KeyEntry::LayerKeyEntry(2)',
 }
 for x in 'abcdefghijklmnopqrstuvwxyz':
     hid_labels[x] = 'HID_KEYBOARD_%s_AND_%s' % (x.upper(), x.upper())
@@ -103,6 +146,96 @@ class KeyMatrix(targets.Target):
         self.rows = rows
         self.cols = cols
 
+    def _parseLabel(self, label):
+        llabel = label.lower()
+        v = hid_labels.get(llabel)
+        if v:
+            if v.startswith('HID_KEYBOARD'):
+                return 'KeyEntry::BasicKeyEntry(%s)' % v
+            elif v.startswith('HID_CONSUMER'):
+                return 'KeyEntry::ExtraKeyEntry(ConsumerKey, %s)' % v
+            return v
+
+        m = re.match('(.+)/(.+)$', label)
+        if m:
+            # Dual Role key
+            k = hid_labels[m.group(1).lower()]
+            mods = {
+                'ctrl': 'LeftControl',
+                'alt': 'LeftAlt',
+                'shift': 'LeftShift',
+                'gui': 'LeftGui',
+                'hyper': 'Hyper'
+            }
+            return 'KeyEntry::DualRoleKeyEntry(%s, %s)' % (k, mods[m.group(2).lower()])
+
+        m = re.match('M(\d+)$', label)
+        if m:
+            # Macro
+            return 'KeyEntry::MacroKeyEntry(%s)' % m.group(1)
+
+        print('No mapping for ', label)
+        return None
+
+    def _computeKeyMap(self, rows, cols):
+        ''' Make a pass through the keys and generate the keymap.
+            The middle legend is the key assignment on the base layer.
+            The front-left legend is the L1 assignment
+            The front-right legend is the L2 assignment. '''
+        maxCode = rows * cols
+
+        physkeys = self.layout.layout.keys()
+        keys = self.keymap.layout.keys()
+
+        # indices in the labels array for the layer positions
+        L0 = 0  # center
+        L1 = 4  # front left
+        L2 = 5  # front right
+        allowed_layers = [L0, L1, L2]
+        byLayer = {}
+
+        def getLayer(n):
+            if n not in byLayer:
+                byLayer[n] = [None] * maxCode
+            return byLayer[n]
+
+        # Iterate both maps at the same time; we don't yet know anything
+        # about the physical or logical layouts, but we know that the two
+        # layouts have to match.  Since the layout parser yields the keys
+        # in a deterministic order, and the layout editor saves the data
+        # file with a deterministic order, the same layout in the editor
+        # will yield the same ordering for the keys when we zip them
+        # together in this loop.  We use this property to associate the
+        # kXX labels from the layer assignment data file.  The kXX labels
+        # are a hint to this code about the row/col number of a given
+        # key position in the scanned matrix.
+        for physk, mkey in zip(physkeys, keys):
+            # parse the physical key label into a matrix coordinate
+            m = re.match('k([0-9a-f]+)_?([0-9a-f]+)$',
+                         physk.shortLabel())
+
+            def parse_num(x):
+                try:
+                    return int(x)
+                except ValueError:
+                    return int(x, 16)
+
+            label = mkey.shortLabel().lower()
+            if m:
+                r = parse_num(m.group(1))
+                c = parse_num(m.group(2))
+
+                for layer, idx in enumerate(allowed_layers):
+                    if idx >= len(mkey.labels):
+                        continue
+                    label = mkey.labels[idx]
+                    if len(label) > 0:
+                        # print(layer, r, c, label)
+                        scancode = (r * cols) + c + 1
+                        getLayer(layer)[scancode - 1] = self._parseLabel(label)
+
+        return byLayer
+
     def _compute_lib(self):
         if self.lib:
             return self.lib
@@ -145,45 +278,20 @@ using Matrix = KeyMatrix<{rows}, {cols}>;
             '''.format(rows=rows, cols=cols, maxcode=maxCode))
 
             if self.keymap:
-                physkeys = list(layout.keys())
-                keys = list(self.keymap.layout.keys())
-                kmap = {}
-                for physk, mkey in zip(physkeys, keys):
-                    # parse the physical key label into a matrix coordinate
-                    m = re.match('k([0-9a-f]+)_?([0-9a-f]+)$',
-                                 physk.shortLabel())
-
-                    def parse_num(x):
-                        try:
-                            return int(x)
-                        except ValueError:
-                            return int(x, 16)
-
-                    label = mkey.shortLabel().lower()
-                    if m:
-                        r = parse_num(m.group(1))
-                        c = parse_num(m.group(2))
-                        rhs = hid_labels.get(label, 'HID_KEYBOARD_NO_EVENT')
-                        if rhs == 'HID_KEYBOARD_NO_EVENT':
-                            print('need %s' % label)
-                        scancode = (r * cols) + c + 1
-                        kmap[scancode] = rhs
-                    else:
-                        print(physk.shortLabel(), ' no match', label)
+                layers = self._computeKeyMap(rows, cols)
 
                 f.write('''
-const KeyEntry keyMapData[%d]
+const KeyEntry keyMapData[%d * %d]
 #ifdef PROGMEM
         PROGMEM
 #endif
-        = {\n''' % maxCode)
-                for scancode in range(1, 1 + maxCode):
-                    v = kmap.get(scancode, 'HID_KEYBOARD_NO_EVENT')
-                    if v.startswith('HID_KEYBOARD'):
-                        v = 'KeyEntry::BasicKeyEntry(%s)' % v
-                    elif v.startswith('HID_CONSUMER'):
-                        v = 'KeyEntry::ExtraKeyEntry(ConsumerKey, %s)' % v
-                    f.write('\t%s,\n' % v)
+        = {\n''' % (len(layers), maxCode))
+                for layer in sorted(layers.keys()):
+                    kmap = layers[layer]
+                    f.write('  // Layer %d\n' % layer)
+                    for entry in kmap:
+                        f.write('  %s,\n' %
+                                (entry or 'KeyEntry::BasicKeyEntry(0)'))
                 f.write('};\n')
             f.write('\n}\n')
 

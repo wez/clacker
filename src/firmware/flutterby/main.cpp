@@ -59,6 +59,7 @@ ProgMemIter<uint8_t> lookupMacroDefinition(uint16_t macroid) {
 }
 }
 
+#if 0
 const KeyEntry localKeyMapData[2 * 64] PROGMEM = {
     // Layer 0
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
@@ -191,6 +192,7 @@ const KeyEntry localKeyMapData[2 * 64] PROGMEM = {
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_SLASH_AND_QUESTION_MARK),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
 };
+#endif
 
 struct blinker : public Task<blinker> {
   void run() {
@@ -235,7 +237,7 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
 
   KeyEntry loadEntry(uint8_t scanCode) {
     auto layerMap =
-        localKeyMapData + (currentLayer * Matrix::RowCount * Matrix::ColCount);
+        keyMapData + (currentLayer * Matrix::RowCount * Matrix::ColCount);
     return progMemLoad(((KeyEntry*)(layerMap)) + scanCode - 1);
   }
 
