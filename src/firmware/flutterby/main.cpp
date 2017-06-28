@@ -83,7 +83,7 @@ const KeyEntry localKeyMapData[64] PROGMEM = {
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_R_AND_R),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_T_AND_T),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_BRACKET_AND_LEFT_CURLY_BRACE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT, Hyper), // Rekt
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_GUI),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_RIGHT_BRACKET_AND_RIGHT_CURLY_BRACE),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_Y_AND_Y),
@@ -169,9 +169,12 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
 
         switch (action.basic.type) {
           case BasicKey:
-            if (action.basic.code == HID_KEYBOARD_NO_EVENT) {
+            if (action.basic.code == HID_KEYBOARD_NO_EVENT &&
+                action.basic.mods == 0) {
               continue;
             }
+
+            report.mods |= action.basic.mods;
 
             if (action.basic.code >= HID_KEYBOARD_LEFT_CONTROL &&
                 action.basic.code <= HID_KEYBOARD_RIGHT_GUI) {

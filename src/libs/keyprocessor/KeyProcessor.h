@@ -127,17 +127,27 @@ enum KeyEntryType {
   MacroKey,
 };
 
+enum BasicKeyMods {
+  LeftControl = 1 << 0,
+  LeftShift = 1 << 1,
+  LeftAlt = 1 << 2,
+  LeftGui = 1 << 3,
+  Hyper = LeftControl | LeftShift | LeftAlt | LeftGui,
+};
+
 union KeyEntry {
   uint16_t raw;
 
   // BasicKey
   struct BasicKeyEntry {
     unsigned type : 4;
-    unsigned spare_ : 4;
+    // BasicKeyMods or'd together; extra modifiers associated
+    // with this key being pressed
+    unsigned mods : 4;
     uint8_t code;
 
-    constexpr BasicKeyEntry(uint8_t code)
-        : type(BasicKey), spare_(0), code(code) {}
+    constexpr BasicKeyEntry(uint8_t code, uint8_t mods = 0)
+        : type(BasicKey), mods(mods), code(code) {}
   } basic;
 
   // ConsumerKey or SystemKey.
