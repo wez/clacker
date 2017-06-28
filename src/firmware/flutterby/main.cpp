@@ -59,141 +59,6 @@ ProgMemIter<uint8_t> lookupMacroDefinition(uint16_t macroid) {
 }
 }
 
-#if 0
-const KeyEntry localKeyMapData[2 * 64] PROGMEM = {
-    // Layer 0
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_1_AND_EXCLAMATION_POINT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_2_AND_AT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_3_AND_POUND),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_4_AND_DOLLAR),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_5_AND_PERCENT),
-    KeyEntry::MacroKeyEntry(MacroCopy),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_CONTROL),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_ALT),
-    KeyEntry::MacroKeyEntry(MacroPaste),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_6_AND_CARAT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_7_AND_AMPERSAND),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_8_AND_ASTERISK),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_9_AND_LEFT_PAREN),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_0_AND_RIGHT_PAREN),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_TAB),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Q_AND_Q),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_W_AND_W),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_E_AND_E),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_R_AND_R),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_T_AND_T),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_BRACKET_AND_LEFT_CURLY_BRACE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT, Hyper), // Rekt
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_GUI),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_RIGHT_BRACKET_AND_RIGHT_CURLY_BRACE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Y_AND_Y),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_U_AND_U),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_I_AND_I),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_O_AND_O),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_P_AND_P),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_BACKSLASH_AND_PIPE),
-    KeyEntry::DualRoleKeyEntry(HID_KEYBOARD_ESCAPE, LeftControl),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_A_AND_A),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_S_AND_S),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_D_AND_D),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_F_AND_F),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_G_AND_G),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_MINUS_AND_UNDERSCORE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DELETE_FORWARD),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_ENTER),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_EQUALS_AND_PLUS),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_H_AND_H),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_J_AND_J),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_K_AND_K),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_L_AND_L),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SEMICOLON_AND_COLON),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_QUOTE_AND_DOUBLEQUOTE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Z_AND_Z),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_X_AND_X),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_C_AND_C),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_V_AND_V),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_B_AND_B),
-    KeyEntry::LayerKeyEntry(1),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DELETE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SPACEBAR),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_N_AND_N),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_M_AND_M),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_COMMA_AND_LESS_THAN),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_PERIOD_AND_GREATER_THAN),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SLASH_AND_QUESTION_MARK),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
-    // Layer 1
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_1_AND_EXCLAMATION_POINT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_2_AND_AT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_3_AND_POUND),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_4_AND_DOLLAR),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_5_AND_PERCENT),
-    KeyEntry::MacroKeyEntry(MacroCopy),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_CONTROL),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_ALT),
-    KeyEntry::MacroKeyEntry(MacroPaste),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_6_AND_CARAT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_7_AND_AMPERSAND),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_8_AND_ASTERISK),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_9_AND_LEFT_PAREN),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_0_AND_RIGHT_PAREN),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_TAB),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Q_AND_Q),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_W_AND_W),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_E_AND_E),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_R_AND_R),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_T_AND_T),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_BRACKET_AND_LEFT_CURLY_BRACE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT, Hyper), // Rekt
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_GUI),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_RIGHT_BRACKET_AND_RIGHT_CURLY_BRACE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Y_AND_Y),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_U_AND_U),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_I_AND_I),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_O_AND_O),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_P_AND_P),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_BACKSLASH_AND_PIPE),
-    KeyEntry::DualRoleKeyEntry(HID_KEYBOARD_ESCAPE, LeftControl),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_A_AND_A),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_S_AND_S),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_D_AND_D),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_F_AND_F),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_G_AND_G),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_MINUS_AND_UNDERSCORE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DELETE_FORWARD),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_ENTER),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_EQUALS_AND_PLUS),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_ARROW),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DOWN_ARROW),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_UP_ARROW),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_RIGHT_ARROW),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SEMICOLON_AND_COLON),
-    KeyEntry::Consumer(HID_CONSUMER_PLAY_SLASH_PAUSE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Z_AND_Z),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_X_AND_X),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_C_AND_C),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_V_AND_V),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_B_AND_B),
-    KeyEntry::LayerKeyEntry(1),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DELETE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SPACEBAR),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_N_AND_N),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_M_AND_M),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_COMMA_AND_LESS_THAN),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_PERIOD_AND_GREATER_THAN),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SLASH_AND_QUESTION_MARK),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
-};
-#endif
-
 struct blinker : public Task<blinker> {
   void run() {
     while (true) {
@@ -262,7 +127,7 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
     lufa::Report report;
     report.clear();
     auto& usb = lufa::LufaUSB::get();
-    bool haveMacro = false;
+    uint8_t macroScanCode = 0;
 
     // First pass: process layer transitions that just occurred
     for (auto& k : keyState) {
@@ -330,16 +195,13 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
           case SystemKey:
             usb.systemKey(action.extra.usage);
             break;
-
-          case MacroKey:
-            haveMacro = true;
-            break;
-
-          case LayerKey:
-            // Handled already above
-            break;
         }
-      } else if (k.eventTime >= lastStateTick) {
+      } else if (k.eventTime > lastStateTick) {
+        logln(
+            "key eventTime ",
+            int{k.eventTime},
+            " >= lastStateTick ",
+            int{lastStateTick});
         // We just released this key
         auto action = loadEntry(k.scanCode);
         switch (action.basic.type) {
@@ -349,6 +211,12 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
               report.addKey(action.dual.code);
             }
             break;
+          case MacroKey:
+            if (k.eventTime - k.priorTime <= TappingInterval) {
+              macroScanCode = k.scanCode;
+            }
+            break;
+
           case ConsumerKey:
             usb.consumerKey(0);
             break;
@@ -359,17 +227,14 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
       }
     }
 
-    if (haveMacro) {
-      for (auto& k : keyState) {
-        if (k.scanCode != 0 && k.down) {
-          auto action = loadEntry(k.scanCode);
+    if (macroScanCode != 0) {
+      auto action = loadEntry(macroScanCode);
+      macroScanCode = 0;
 
-          switch (action.basic.type) {
-            case MacroKey:
-              runMacro(report, action.func.funcid);
-              break;
-          }
-        }
+      switch (action.basic.type) {
+        case MacroKey:
+          runMacro(report, action.func.funcid);
+          break;
       }
     }
 
