@@ -171,6 +171,10 @@ union KeyEntry {
         : type(t), usage(usage) {}
   } extra;
 
+  static constexpr ExtraKeyEntry Consumer(uint16_t usage) {
+    return ExtraKeyEntry(ConsumerKey, usage);
+  }
+
   // FunctionKey or MacroKey
   struct FunctionKeyEntry {
     unsigned type : 4;

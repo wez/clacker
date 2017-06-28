@@ -6,6 +6,9 @@ enum InterfaceDescriptors {
   INTERFACE_ID_CDC_DCI,
   INTERFACE_ID_Keyboard,
   INTERFACE_ID_ExtraKeys,
+  // Must be last; is used to advertize the correct number
+  // of interfaces in the USB descriptor
+  INTERFACE_COUNT,
 };
 
 /** Endpoint address of the Keyboard HID reporting IN endpoint. */

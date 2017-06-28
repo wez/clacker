@@ -173,7 +173,7 @@ const KeyEntry localKeyMapData[2 * 64] PROGMEM = {
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_UP_ARROW),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_RIGHT_ARROW),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_SEMICOLON_AND_COLON),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_QUOTE_AND_DOUBLEQUOTE),
+    KeyEntry::Consumer(HID_CONSUMER_PLAY_SLASH_PAUSE),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_Z_AND_Z),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_X_AND_X),
@@ -216,6 +216,9 @@ void logKey(const KeyEntry& ent) {
     case LayerKey:
       log("LayerKey ", int{ent.layer.layerid});
       return;
+    case ConsumerKey:
+      log("Consumer ", int{ent.extra.usage});
+      return;
     default:
       log("Unknown");
       return;
@@ -233,13 +236,6 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
   KeyEntry loadEntry(uint8_t scanCode) {
     auto layerMap =
         localKeyMapData + (currentLayer * Matrix::RowCount * Matrix::ColCount);
-    logln(
-        "loadEntry layer=",
-        int{currentLayer},
-        " scan=",
-        int{scanCode},
-        " size=",
-        int{sizeof(localKeyMapData[0])});
     return progMemLoad(((KeyEntry*)(layerMap)) + scanCode - 1);
   }
 
@@ -332,6 +328,7 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
           case SystemKey:
             usb.systemKey(action.extra.usage);
             break;
+
           case MacroKey:
             haveMacro = true;
             break;
@@ -349,6 +346,12 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
             if (k.eventTime - k.priorTime <= TappingInterval) {
               report.addKey(action.dual.code);
             }
+            break;
+          case ConsumerKey:
+            usb.consumerKey(0);
+            break;
+          case SystemKey:
+            usb.systemKey(0);
             break;
         }
       }
