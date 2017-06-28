@@ -64,9 +64,8 @@ struct scanner : public Task<scanner> {
 
     // this is a good point to run the keyState through the keymap
     // and emit the USB keycodes
-    lufa::Command cmd;
-    cmd.CommandType = lufa::KeyReport;
-    cmd.u.report.clear();
+    lufa::Report report;
+    report.clear();
     auto& usb = lufa::LufaUSB::get();
 
     for (auto& k : keyState) {
@@ -82,12 +81,12 @@ struct scanner : public Task<scanner> {
             if (action.basic.code >= HID_KEYBOARD_LEFT_CONTROL &&
                 action.basic.code <= HID_KEYBOARD_RIGHT_GUI) {
               // Convert to modifier bits
-              cmd.u.report.mods |= 1
+              report.mods |= 1
                   << (action.basic.code - HID_KEYBOARD_LEFT_CONTROL);
               continue;
             }
 
-            cmd.u.report.addKey(action.basic.code);
+            report.addKey(action.basic.code);
             break;
           case ConsumerKey:
             usb.consumerKey(action.extra.usage);
@@ -99,7 +98,7 @@ struct scanner : public Task<scanner> {
       }
     }
 
-    usb.queue.send(cmd);
+    usb.basicReport(report);
   }
 
   void logMatrixState() {

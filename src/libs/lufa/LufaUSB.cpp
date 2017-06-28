@@ -387,6 +387,7 @@ extern "C" bool CALLBACK_HID_Device_CreateHIDReport(
   return false;
 }
 
+#if 0
 void LufaUSB::populateExtraKey() {
   if (extraKey_.usage) {
     Endpoint_ClearSETUP();
@@ -398,6 +399,7 @@ void LufaUSB::populateExtraKey() {
     extraKey_.usage = 0;
   }
 }
+#endif
 
 extern "C" void EVENT_USB_Device_ControlRequest(void) {
 #if 0
@@ -503,14 +505,14 @@ void LufaUSB::run() {
       }
     }
 
-    if (queue.recv(cmd, delay).hasValue()) {
+    if (queue_.recv(cmd, delay).hasValue()) {
       // Do something with cmd
       switch (cmd.CommandType) {
         case KeyReport:
           memcpy(&pendingReport_, &cmd.u.report, sizeof(pendingReport_));
           break;
         case ExtraKeyReport:
-          memcpy(&extraKey_, &cmd.u.extra, sizeof(extraKey_));
+          // memcpy(&extraKey_, &cmd.u.extra, sizeof(extraKey_));
 
           {
             Endpoint_SelectEndpoint(EXTRAKEY_EPADDR & ~ENDPOINT_DIR_IN);
@@ -537,7 +539,7 @@ void LufaUSB::consumerKey(uint16_t code) {
   cmd.CommandType = ExtraKeyReport;
   cmd.u.extra.report_id = REPORT_ID_CONSUMER;
   cmd.u.extra.usage = code;
-  queue.send(cmd);
+  queue_.send(cmd);
 }
 
 void LufaUSB::systemKey(uint16_t code) {
@@ -545,7 +547,14 @@ void LufaUSB::systemKey(uint16_t code) {
   cmd.CommandType = ExtraKeyReport;
   cmd.u.extra.report_id = REPORT_ID_SYSTEM;
   cmd.u.extra.usage = code - 0x81 /* HID_SYSTEM_POWER_DOWN */;
-  queue.send(cmd);
+  queue_.send(cmd);
+}
+
+void LufaUSB::basicReport(const Report& report) {
+  Command cmd;
+  cmd.CommandType = KeyReport;
+  cmd.u.report = report;
+  queue_.send(cmd);
 }
 }
 }

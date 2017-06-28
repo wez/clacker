@@ -42,24 +42,25 @@ struct Command {
 } __attribute__((packed));
 
 class LufaUSB : public Task<LufaUSB, configMINIMAL_STACK_SIZE, 1> {
+  using CommandQueue = Queue<Command, 3>;
+  CommandQueue queue_;
   Report pendingReport_;
+#if 0
   ExtraReport extraKey_;
+#endif
 
   void tick();
 
  public:
-  using CommandQueue = Queue<Command, 3>;
-
   static LufaUSB& get();
 
   void run();
 
   void populateReport(USB_KeyboardReport_Data_t* ReportData);
 
-  CommandQueue queue;
-
   void consumerKey(uint16_t code);
   void systemKey(uint16_t code);
+  void basicReport(const Report& report);
 
   void populateExtraKey();
 };
