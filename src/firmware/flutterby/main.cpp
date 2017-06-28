@@ -59,17 +59,18 @@ ProgMemIter<uint8_t> lookupMacroDefinition(uint16_t macroid) {
 }
 }
 
-const KeyEntry localKeyMapData[64] PROGMEM = {
+const KeyEntry localKeyMapData[2 * 64] PROGMEM = {
+    // Layer 0
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_1_AND_EXCLAMATION_POINT),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_2_AND_AT),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_3_AND_POUND),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_4_AND_DOLLAR),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_5_AND_PERCENT),
-    KeyEntry::FunctionKeyEntry(MacroKey, MacroCopy),
+    KeyEntry::MacroKeyEntry(MacroCopy),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_CONTROL),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_ALT),
-    KeyEntry::FunctionKeyEntry(MacroKey, MacroPaste),
+    KeyEntry::MacroKeyEntry(MacroPaste),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_6_AND_CARAT),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_7_AND_AMPERSAND),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_8_AND_ASTERISK),
@@ -92,7 +93,7 @@ const KeyEntry localKeyMapData[64] PROGMEM = {
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_O_AND_O),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_P_AND_P),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_BACKSLASH_AND_PIPE),
-    KeyEntry::BasicKeyEntry(HID_KEYBOARD_ESCAPE),
+    KeyEntry::DualRoleKeyEntry(HID_KEYBOARD_ESCAPE, LeftControl),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_A_AND_A),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_S_AND_S),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_D_AND_D),
@@ -114,7 +115,72 @@ const KeyEntry localKeyMapData[64] PROGMEM = {
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_C_AND_C),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_V_AND_V),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_B_AND_B),
+    KeyEntry::LayerKeyEntry(1),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DELETE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SPACEBAR),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_N_AND_N),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_M_AND_M),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_COMMA_AND_LESS_THAN),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_PERIOD_AND_GREATER_THAN),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SLASH_AND_QUESTION_MARK),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
+    // Layer 1
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_1_AND_EXCLAMATION_POINT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_2_AND_AT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_3_AND_POUND),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_4_AND_DOLLAR),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_5_AND_PERCENT),
+    KeyEntry::MacroKeyEntry(MacroCopy),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_CONTROL),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_ALT),
+    KeyEntry::MacroKeyEntry(MacroPaste),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_6_AND_CARAT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_7_AND_AMPERSAND),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_8_AND_ASTERISK),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_9_AND_LEFT_PAREN),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_0_AND_RIGHT_PAREN),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_TAB),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Q_AND_Q),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_W_AND_W),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_E_AND_E),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_R_AND_R),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_T_AND_T),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_BRACKET_AND_LEFT_CURLY_BRACE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT, Hyper), // Rekt
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_GUI),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_RIGHT_BRACKET_AND_RIGHT_CURLY_BRACE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Y_AND_Y),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_U_AND_U),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_I_AND_I),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_O_AND_O),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_P_AND_P),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_BACKSLASH_AND_PIPE),
+    KeyEntry::DualRoleKeyEntry(HID_KEYBOARD_ESCAPE, LeftControl),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_A_AND_A),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_S_AND_S),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_D_AND_D),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_F_AND_F),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_G_AND_G),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_MINUS_AND_UNDERSCORE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DELETE_FORWARD),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_ENTER),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_EQUALS_AND_PLUS),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_ARROW),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_DOWN_ARROW),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_UP_ARROW),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_RIGHT_ARROW),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_SEMICOLON_AND_COLON),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_QUOTE_AND_DOUBLEQUOTE),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_LEFT_SHIFT),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_Z_AND_Z),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_X_AND_X),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_C_AND_C),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_V_AND_V),
+    KeyEntry::BasicKeyEntry(HID_KEYBOARD_B_AND_B),
+    KeyEntry::LayerKeyEntry(1),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_DELETE),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_SPACEBAR),
     KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT),
@@ -136,9 +202,46 @@ struct blinker : public Task<blinker> {
   }
 };
 
+void logKey(const KeyEntry& ent) {
+  switch (ent.basic.type) {
+    case BasicKey:
+      log("BasicKey mods=", int{ent.basic.mods}, " code=", int{ent.basic.code});
+      return;
+    case FunctionKey:
+      log("FunctionKey ", int{ent.func.funcid});
+      return;
+    case MacroKey:
+      log("MacroKey ", int{ent.func.funcid});
+      return;
+    case LayerKey:
+      log("LayerKey ", int{ent.layer.layerid});
+      return;
+    default:
+      log("Unknown");
+      return;
+  }
+}
+
+static constexpr uint16_t TappingInterval = 200 / portTICK_PERIOD_MS;
+
 struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
   Scanner scanner;
-  KeyboardState<16, 200 / portTICK_PERIOD_MS> keyState;
+  KeyboardState<16, TappingInterval> keyState;
+  uint8_t currentLayer;
+  uint16_t lastStateTick;
+
+  KeyEntry loadEntry(uint8_t scanCode) {
+    auto layerMap =
+        localKeyMapData + (currentLayer * Matrix::RowCount * Matrix::ColCount);
+    logln(
+        "loadEntry layer=",
+        int{currentLayer},
+        " scan=",
+        int{scanCode},
+        " size=",
+        int{sizeof(localKeyMapData[0])});
+    return progMemLoad(((KeyEntry*)(layerMap)) + scanCode - 1);
+  }
 
   void updateKeyState() {
     uint16_t nowTick = xTaskGetTickCount();
@@ -163,9 +266,41 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
     auto& usb = lufa::LufaUSB::get();
     bool haveMacro = false;
 
+    // First pass: process layer transitions that just occurred
     for (auto& k : keyState) {
-      if (k.scanCode != 0 && k.down) {
-        auto action = progMemLoad(localKeyMapData + k.scanCode - 1);
+      if (k.scanCode != 0 && k.eventTime >= lastStateTick) {
+        auto action = loadEntry(k.scanCode);
+        log("Consider layer, ");
+        logKey(action);
+        log("\r\n");
+        if (action.layer.type != LayerKey) {
+          continue;
+        }
+
+        if (k.down) {
+          // Holding down a momentary layer key switches the layer.
+          // We also transition on press for non-momentary switches
+          // to account for the user very quickly pressing a key
+          // that belongs in the target layer after pressing the
+          // layer modifier.
+          // TODO: should be a stack
+          currentLayer = action.layer.layerid;
+          logln(makeConstString("move to layer "), int{currentLayer});
+        } else if (action.layer.momentary) {
+          // Finished a momentary layer switch, restore prior layer
+          // TODO: stack!
+          logln(makeConstString("restore layer"));
+          currentLayer = 0;
+        }
+      }
+    }
+
+    for (auto& k : keyState) {
+      if (k.scanCode == 0) {
+        continue;
+      }
+      if (k.down) {
+        auto action = loadEntry(k.scanCode);
 
         switch (action.basic.type) {
           case BasicKey:
@@ -186,6 +321,11 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
 
             report.addKey(action.basic.code);
             break;
+          case DualRoleKey:
+            // While held down, we emit the modifiers.
+            report.mods |= action.dual.mods;
+            break;
+
           case ConsumerKey:
             usb.consumerKey(action.extra.usage);
             break;
@@ -195,6 +335,21 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
           case MacroKey:
             haveMacro = true;
             break;
+
+          case LayerKey:
+            // Handled already above
+            break;
+        }
+      } else if (k.eventTime >= lastStateTick) {
+        // We just released this key
+        auto action = loadEntry(k.scanCode);
+        switch (action.basic.type) {
+          case DualRoleKey:
+            // If we tapped the key then we emit the key code
+            if (k.eventTime - k.priorTime <= TappingInterval) {
+              report.addKey(action.dual.code);
+            }
+            break;
         }
       }
     }
@@ -202,7 +357,7 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
     if (haveMacro) {
       for (auto& k : keyState) {
         if (k.scanCode != 0 && k.down) {
-          auto action = progMemLoad(localKeyMapData + k.scanCode - 1);
+          auto action = loadEntry(k.scanCode);
 
           switch (action.basic.type) {
             case MacroKey:
@@ -214,6 +369,7 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
     }
 
     usb.basicReport(report);
+    lastStateTick = nowTick;
   }
 
   void runMacro(const lufa::Report& report, uint16_t macroid) {
@@ -295,13 +451,14 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
 
   void run() {
     scanner.setup();
+    lastStateTick = 0;
 
     while (true) {
       delayMilliseconds(30);
       if (scanner.scanMatrix()) {
         logMatrixState();
-        updateKeyState();
       }
+      updateKeyState();
     }
   }
 };

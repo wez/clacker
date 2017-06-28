@@ -25,6 +25,8 @@ struct KeyState {
   unsigned toggles : 7;
   // Time at which the last transition occurred
   uint16_t eventTime;
+  // Previous transition time
+  uint16_t priorTime;
 };
 
 // Represents the state of all of the keys that we can
@@ -47,6 +49,12 @@ class KeyboardState {
     } else {
       // Start a new toggle streak
       slot->toggles = 1;
+    }
+
+    if (slot->scanCode != scanCode) {
+      slot->priorTime = eventTime;
+    } else {
+      slot->priorTime = slot->eventTime;
     }
 
     slot->scanCode = scanCode;
@@ -125,6 +133,8 @@ enum KeyEntryType {
   SystemKey,
   FunctionKey,
   MacroKey,
+  LayerKey,
+  DualRoleKey,
 };
 
 enum BasicKeyMods {
@@ -170,10 +180,34 @@ union KeyEntry {
         : type(t), funcid(funcid) {}
   } func;
 
+  static constexpr FunctionKeyEntry MacroKeyEntry(uint16_t macroid) {
+    return FunctionKeyEntry(MacroKey, macroid);
+  }
+
+  struct LayerKeyEntry {
+    unsigned type : 4;
+    unsigned momentary : 1;
+    unsigned spare_ : 3;
+    uint8_t layerid;
+
+    constexpr LayerKeyEntry(uint8_t layerid, bool momentary = true)
+        : type(LayerKey), momentary(momentary), spare_(0), layerid(layerid) {}
+  } layer;
+
+  struct DualRoleKeyEntry {
+    unsigned type : 4;
+    unsigned mods : 4;
+    uint8_t code;
+    constexpr DualRoleKeyEntry(uint8_t code, uint8_t mods = 0)
+        : type(DualRoleKey), mods(mods), code(code) {}
+  } dual;
+
   constexpr KeyEntry() : raw(0) {}
   constexpr KeyEntry(BasicKeyEntry b) : basic(b) {}
   constexpr KeyEntry(ExtraKeyEntry b) : extra(b) {}
   constexpr KeyEntry(FunctionKeyEntry b) : func(b) {}
+  constexpr KeyEntry(LayerKeyEntry b) : layer(b) {}
+  constexpr KeyEntry(DualRoleKeyEntry b) : dual(b) {}
 };
 
 // An application-provided function to execute a user-defined function

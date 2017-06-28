@@ -56,6 +56,7 @@ hid_labels = {
     '/': 'HID_KEYBOARD_SLASH_AND_QUESTION_MARK',
     'copy': 'HID_KEYBOARD_COPY',
     'paste': 'HID_KEYBOARD_PASTE',
+    'hyper': 'KeyEntry::BasicKeyEntry(HID_KEYBOARD_NO_EVENT, Hyper)',
 }
 for x in 'abcdefghijklmnopqrstuvwxyz':
     hid_labels[x] = 'HID_KEYBOARD_%s_AND_%s' % (x.upper(), x.upper())
