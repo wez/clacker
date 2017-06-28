@@ -49,14 +49,14 @@ struct scanner : public Task<scanner> {
   void updateKeyState() {
     uint16_t nowTick = xTaskGetTickCount();
 
-    for (uint8_t rowNum = 0; rowNum <= Matrix::RowCount; ++rowNum) {
+    for (uint8_t rowNum = 0; rowNum < Matrix::RowCount; ++rowNum) {
       auto prior = scanner.prior().rows[rowNum];
       auto current = scanner.current().rows[rowNum];
-      for (uint8_t colNum = 0; colNum <= Matrix::ColCount; ++colNum) {
+      for (uint8_t colNum = 0; colNum < Matrix::ColCount; ++colNum) {
         auto mask = 1 << colNum;
 
         if ((prior & mask) != (current & mask)) {
-          auto scanCode = (rowNum * (1 + Matrix::ColCount)) + colNum + 1;
+          auto scanCode = (rowNum * Matrix::ColCount) + colNum + 1;
           keyState.updateKeyState(scanCode, current & mask, nowTick);
         }
       }
@@ -67,33 +67,48 @@ struct scanner : public Task<scanner> {
     lufa::Command cmd;
     cmd.CommandType = lufa::KeyReport;
     cmd.u.report.clear();
+    auto& usb = lufa::LufaUSB::get();
+
     for (auto& k : keyState) {
       if (k.scanCode != 0 && k.down) {
         auto action = progMemLoad(keyMapData + k.scanCode - 1);
-        if (action == HID_KEYBOARD_NO_EVENT) {
-          continue;
-        }
 
-        if (action >= HID_KEYBOARD_LEFT_CONTROL &&
-            action <= HID_KEYBOARD_RIGHT_GUI) {
-          // Convert to modifier bits
-          cmd.u.report.mods |= 1 << (action - HID_KEYBOARD_LEFT_CONTROL);
-          continue;
-        }
+        switch (action.basic.type) {
+          case BasicKey:
+            if (action.basic.code == HID_KEYBOARD_NO_EVENT) {
+              continue;
+            }
 
-        cmd.u.report.addKey(action);
+            if (action.basic.code >= HID_KEYBOARD_LEFT_CONTROL &&
+                action.basic.code <= HID_KEYBOARD_RIGHT_GUI) {
+              // Convert to modifier bits
+              cmd.u.report.mods |= 1
+                  << (action.basic.code - HID_KEYBOARD_LEFT_CONTROL);
+              continue;
+            }
+
+            cmd.u.report.addKey(action.basic.code);
+            break;
+          case ConsumerKey:
+            usb.consumerKey(action.extra.usage);
+            break;
+          case SystemKey:
+            usb.systemKey(action.extra.usage);
+            break;
+        }
       }
     }
-    lufa::LufaUSB::get().queue.send(cmd);
+
+    usb.queue.send(cmd);
   }
 
   void logMatrixState() {
     logln(makeConstString("matrix changed!"));
 
-    for (auto rowNum = 0; rowNum <= Matrix::RowCount; ++rowNum) {
+    for (auto rowNum = 0; rowNum < Matrix::RowCount; ++rowNum) {
       auto current = scanner.current().rows[rowNum];
       log("row", rowNum, " ");
-      for (auto colNum = 0; colNum <= Matrix::ColCount; ++colNum) {
+      for (auto colNum = 0; colNum < Matrix::ColCount; ++colNum) {
         auto mask = 1 << colNum;
         int down = (current & mask) ? 1 : 0;
         log(down);

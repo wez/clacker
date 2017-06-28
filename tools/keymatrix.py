@@ -54,6 +54,8 @@ hid_labels = {
     '>': 'HID_KEYBOARD_PERIOD_AND_GREATER_THAN',
     '?': 'HID_KEYBOARD_SLASH_AND_QUESTION_MARK',
     '/': 'HID_KEYBOARD_SLASH_AND_QUESTION_MARK',
+    'copy': 'HID_KEYBOARD_COPY',
+    'paste': 'HID_KEYBOARD_PASTE',
 }
 for x in 'abcdefghijklmnopqrstuvwxyz':
     hid_labels[x] = 'HID_KEYBOARD_%s_AND_%s' % (x.upper(), x.upper())
@@ -125,7 +127,7 @@ class KeyMatrix(targets.Target):
                 rows = max(rows, int(math.ceil(key.y)))
                 cols = max(cols, int(math.ceil(key.x)))
 
-        maxCode = rows * (1 + cols)
+        maxCode = rows * cols
         hfile = os.path.join(outputs, '%s-matrix.h' % self.name)
         with filesystem.WriteFileIfChanged(hfile) as f:
             f.write('// %s - %s\n' % (self.name, layout.name()))
@@ -136,6 +138,7 @@ class KeyMatrix(targets.Target):
 #endif
 #include "src/libs/keymatrix/KeyMatrix.h"
 #include "src/libs/keyprocessor/HIDTables.h"
+#include "src/libs/keyprocessor/KeyProcessor.h"
 namespace clacker {{
 using Matrix = KeyMatrix<{rows}, {cols}>;
             '''.format(rows=rows, cols=cols, maxcode=maxCode))
@@ -162,20 +165,24 @@ using Matrix = KeyMatrix<{rows}, {cols}>;
                         rhs = hid_labels.get(label, 'HID_KEYBOARD_NO_EVENT')
                         if rhs == 'HID_KEYBOARD_NO_EVENT':
                             print('need %s' % label)
-                        scancode = (r * (1 + cols)) + c + 1
+                        scancode = (r * cols) + c + 1
                         kmap[scancode] = rhs
                     else:
                         print(physk.shortLabel(), ' no match', label)
 
                 f.write('''
-const uint16_t keyMapData[%d]
+const KeyEntry keyMapData[%d]
 #ifdef PROGMEM
         PROGMEM
 #endif
         = {\n''' % maxCode)
                 for scancode in range(1, 1 + maxCode):
-                    f.write('\t%s,\n' % kmap.get(
-                        scancode, 'HID_KEYBOARD_NO_EVENT'))
+                    v = kmap.get(scancode, 'HID_KEYBOARD_NO_EVENT')
+                    if v.startswith('HID_KEYBOARD'):
+                        v = 'KeyEntry::BasicKeyEntry(%s)' % v
+                    elif v.startswith('HID_CONSUMER'):
+                        v = 'KeyEntry::ExtraKeyEntry(ConsumerKey, %s)' % v
+                    f.write('\t%s,\n' % v)
                 f.write('};\n')
             f.write('\n}\n')
 

@@ -115,4 +115,50 @@ class KeyboardState {
     return oldest;
   }
 };
+
+enum KeyEntryType {
+  BasicKey,
+  ConsumerKey,
+  SystemKey,
+  FunctionKey,
+};
+
+union KeyEntry {
+  uint16_t raw;
+
+  // BasicKey
+  struct BasicKeyEntry {
+    unsigned type : 4;
+    unsigned spare_ : 4;
+    uint8_t code;
+
+    constexpr BasicKeyEntry(uint8_t code)
+        : type(BasicKey), spare_(0), code(code) {}
+  } basic;
+
+  // ConsumerKey or SystemKey.
+  // These don't work properly at the moment, or macOS can't use them.
+  // I'm not sure which is the case.
+  struct ExtraKeyEntry {
+    unsigned type : 4;
+    unsigned usage : 12;
+
+    constexpr ExtraKeyEntry(enum KeyEntryType t, uint16_t usage)
+        : type(t), usage(usage) {}
+  } extra;
+
+  // FunctionKey
+  struct FunctionKeyEntry {
+    unsigned type : 4;
+    unsigned funcid : 12;
+
+    constexpr FunctionKeyEntry(uint16_t funcid)
+        : type(FunctionKey), funcid(funcid) {}
+  } func;
+
+  constexpr KeyEntry() : raw(0) {}
+  constexpr KeyEntry(BasicKeyEntry b) : basic(b) {}
+  constexpr KeyEntry(ExtraKeyEntry b) : extra(b) {}
+  constexpr KeyEntry(FunctionKeyEntry b) : func(b) {}
+};
 }

@@ -61,10 +61,46 @@ struct USB_Descriptor_Configuration_t {
   USB_Descriptor_Interface_t HID_Interface;
   USB_HID_Descriptor_HID_t HID_KeyboardHID;
   USB_Descriptor_Endpoint_t HID_ReportINEndpoint;
+  USB_Descriptor_Interface_t Extrakey_Interface;
+  USB_HID_Descriptor_HID_t Extrakey_HID;
+  USB_Descriptor_Endpoint_t Extrakey_INEndpoint;
 };
 
 const USB_Descriptor_HIDReport_Datatype_t PROGMEM KeyboardReport[] = {
     HID_DESCRIPTOR_KEYBOARD(6)};
+
+enum {
+  REPORT_ID_SYSTEM = 2,
+  REPORT_ID_CONSUMER = 3,
+};
+
+const USB_Descriptor_HIDReport_Datatype_t PROGMEM ExtrakeyReport[] = {
+    HID_RI_USAGE_PAGE(8, 0x01), /* Generic Desktop */
+    HID_RI_USAGE(8, 0x80), /* System Control */
+    HID_RI_COLLECTION(8, 0x01), /* Application */
+    HID_RI_REPORT_ID(8, REPORT_ID_SYSTEM),
+    HID_RI_LOGICAL_MINIMUM(16, 0x0001),
+    HID_RI_LOGICAL_MAXIMUM(16, 0x0003),
+    HID_RI_USAGE_MINIMUM(16, 0x0081), /* System Power Down */
+    HID_RI_USAGE_MAXIMUM(16, 0x0083), /* System Wake Up */
+    HID_RI_REPORT_SIZE(8, 16),
+    HID_RI_REPORT_COUNT(8, 1),
+    HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_ARRAY | HID_IOF_ABSOLUTE),
+    HID_RI_END_COLLECTION(0),
+
+    HID_RI_USAGE_PAGE(8, 0x0C), /* Consumer */
+    HID_RI_USAGE(8, 0x01), /* Consumer Control */
+    HID_RI_COLLECTION(8, 0x01), /* Application */
+    HID_RI_REPORT_ID(8, REPORT_ID_CONSUMER),
+    HID_RI_LOGICAL_MINIMUM(16, 0x0001),
+    HID_RI_LOGICAL_MAXIMUM(16, 0x029C),
+    HID_RI_USAGE_MINIMUM(16, 0x0001), /* +10 */
+    HID_RI_USAGE_MAXIMUM(16, 0x029C), /* AC Distribute Vertically */
+    HID_RI_REPORT_SIZE(8, 16),
+    HID_RI_REPORT_COUNT(8, 1),
+    HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_ARRAY | HID_IOF_ABSOLUTE),
+    HID_RI_END_COLLECTION(0),
+};
 
 const USB_Descriptor_Device_t PROGMEM DeviceDescriptor = {
     .Header = {.Size = sizeof(USB_Descriptor_Device_t), .Type = DTYPE_Device},
@@ -233,6 +269,41 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
                                   ENDPOINT_USAGE_DATA),
                              .EndpointSize = KEYBOARD_EPSIZE,
                              .PollingIntervalMS = 0x05},
+    .Extrakey_Interface = {.Header = {.Size =
+                                          sizeof(USB_Descriptor_Interface_t),
+                                      .Type = DTYPE_Interface},
+
+                           .InterfaceNumber = INTERFACE_ID_ExtraKeys,
+                           .AlternateSetting = 0x00,
+
+                           .TotalEndpoints = 1,
+
+                           .Class = HID_CSCP_HIDClass,
+                           .SubClass = HID_CSCP_NonBootSubclass,
+                           .Protocol = HID_CSCP_NonBootProtocol,
+
+                           .InterfaceStrIndex = NO_DESCRIPTOR},
+
+    .Extrakey_HID = {.Header = {.Size = sizeof(USB_HID_Descriptor_HID_t),
+                                .Type = HID_DTYPE_HID},
+
+                     .HIDSpec = VERSION_BCD(1, 1, 1),
+                     .CountryCode = 0x00,
+                     .TotalReportDescriptors = 1,
+                     .HIDReportType = HID_DTYPE_Report,
+                     .HIDReportLength = sizeof(ExtrakeyReport)},
+
+    .Extrakey_INEndpoint = {.Header = {.Size =
+                                           sizeof(USB_Descriptor_Endpoint_t),
+                                       .Type = DTYPE_Endpoint},
+
+                            .EndpointAddress = EXTRAKEY_EPADDR,
+                            .Attributes =
+                                (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC |
+                                 ENDPOINT_USAGE_DATA),
+                            .EndpointSize = EXTRAKEY_EPSIZE,
+                            .PollingIntervalMS = 0x0A},
+
 };
 
 extern "C" uint16_t CALLBACK_USB_GetDescriptor(
@@ -271,8 +342,16 @@ extern "C" uint16_t CALLBACK_USB_GetDescriptor(
       }
       break;
     case HID_DTYPE_HID:
-      Address = &ConfigurationDescriptor.HID_KeyboardHID;
-      Size = sizeof(USB_HID_Descriptor_HID_t);
+      switch (wIndex) {
+        case INTERFACE_ID_Keyboard:
+          Address = &ConfigurationDescriptor.HID_KeyboardHID;
+          Size = sizeof(USB_HID_Descriptor_HID_t);
+          break;
+        case INTERFACE_ID_ExtraKeys:
+          Address = &ConfigurationDescriptor.Extrakey_HID;
+          Size = sizeof(USB_HID_Descriptor_HID_t);
+          break;
+      }
       break;
     case HID_DTYPE_Report:
       Address = &KeyboardReport;
@@ -285,8 +364,10 @@ extern "C" uint16_t CALLBACK_USB_GetDescriptor(
 }
 
 extern "C" void EVENT_USB_Device_ConfigurationChanged(void) {
-  HID_Device_ConfigureEndpoints(&lufa_Keyboard_HID_Interface);
   CDC_Device_ConfigureEndpoints(&lufa_VirtualSerial_CDC_Interface);
+  HID_Device_ConfigureEndpoints(&lufa_Keyboard_HID_Interface);
+  Endpoint_ConfigureEndpoint(
+      EXTRAKEY_EPADDR, EP_TYPE_INTERRUPT, EXTRAKEY_EPSIZE, 1);
   USB_Device_EnableSOFEvents();
 }
 
@@ -306,7 +387,32 @@ extern "C" bool CALLBACK_HID_Device_CreateHIDReport(
   return false;
 }
 
+void LufaUSB::populateExtraKey() {
+  if (extraKey_.usage) {
+    Endpoint_ClearSETUP();
+    Endpoint_SelectEndpoint(EXTRAKEY_EPADDR & ~ENDPOINT_DIR_IN);
+    Endpoint_Write_Control_Stream_LE(&extraKey_, sizeof(extraKey_));
+    Endpoint_ClearIN();
+
+    // Clear it
+    extraKey_.usage = 0;
+  }
+}
+
 extern "C" void EVENT_USB_Device_ControlRequest(void) {
+#if 0
+  switch (USB_ControlRequest.bRequest) {
+    case HID_REQ_GetReport:
+      if (USB_ControlRequest.bmRequestType ==
+          (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE)) {
+        switch (USB_ControlRequest.wIndex) {
+          case INTERFACE_ID_ExtraKeys:
+            LufaUSB::get().populateExtraKey();
+            break;
+        }
+      }
+  }
+#endif
   CDC_Device_ProcessControlRequest(&lufa_VirtualSerial_CDC_Interface);
   HID_Device_ProcessControlRequest(&lufa_Keyboard_HID_Interface);
 }
@@ -403,12 +509,43 @@ void LufaUSB::run() {
         case KeyReport:
           memcpy(&pendingReport_, &cmd.u.report, sizeof(pendingReport_));
           break;
+        case ExtraKeyReport:
+          memcpy(&extraKey_, &cmd.u.extra, sizeof(extraKey_));
+
+          {
+            Endpoint_SelectEndpoint(EXTRAKEY_EPADDR & ~ENDPOINT_DIR_IN);
+            /* Check if write ready for a polling interval around 10ms */
+            uint8_t timeout = 255;
+            while (timeout-- && !Endpoint_IsReadWriteAllowed()) {
+              _delay_us(40);
+            }
+            if (Endpoint_IsReadWriteAllowed()) {
+              Endpoint_Write_Stream_LE(&cmd.u.extra, sizeof(cmd.u.extra), NULL);
+              Endpoint_ClearIN();
+            }
+          }
+          break;
       }
     }
 
     tick();
     taskYIELD();
   }
+}
+void LufaUSB::consumerKey(uint16_t code) {
+  Command cmd;
+  cmd.CommandType = ExtraKeyReport;
+  cmd.u.extra.report_id = REPORT_ID_CONSUMER;
+  cmd.u.extra.usage = code;
+  queue.send(cmd);
+}
+
+void LufaUSB::systemKey(uint16_t code) {
+  Command cmd;
+  cmd.CommandType = ExtraKeyReport;
+  cmd.u.extra.report_id = REPORT_ID_SYSTEM;
+  cmd.u.extra.usage = code - 0x81 /* HID_SYSTEM_POWER_DOWN */;
+  queue.send(cmd);
 }
 }
 }

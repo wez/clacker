@@ -11,6 +11,6 @@ Firmware(
 KeyMatrix(
     name='matrix',
     rows=4,
-    cols=15,
+    cols=16,
     layout=KeyLayout('flutterby.json'),
     keymap=KeyLayout('keymap.json'))

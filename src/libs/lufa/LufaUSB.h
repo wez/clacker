@@ -7,6 +7,7 @@ namespace lufa {
 
 enum CommandType {
   KeyReport,
+  ExtraKeyReport,
 };
 
 struct Report {
@@ -27,17 +28,22 @@ struct Report {
   }
 };
 
+struct ExtraReport {
+  uint8_t report_id;
+  uint16_t usage;
+} __attribute__((packed));
+
 struct Command {
   uint8_t CommandType;
   union {
     Report report;
+    ExtraReport extra;
   } u;
 } __attribute__((packed));
 
-static_assert(sizeof(Command) == 8, "packed ok");
-
 class LufaUSB : public Task<LufaUSB, configMINIMAL_STACK_SIZE, 1> {
   Report pendingReport_;
+  ExtraReport extraKey_;
 
   void tick();
 
@@ -51,6 +57,11 @@ class LufaUSB : public Task<LufaUSB, configMINIMAL_STACK_SIZE, 1> {
   void populateReport(USB_KeyboardReport_Data_t* ReportData);
 
   CommandQueue queue;
+
+  void consumerKey(uint16_t code);
+  void systemKey(uint16_t code);
+
+  void populateExtraKey();
 };
 }
 }

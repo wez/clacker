@@ -5,6 +5,7 @@ enum InterfaceDescriptors {
   INTERFACE_ID_CDC_CCI,
   INTERFACE_ID_CDC_DCI,
   INTERFACE_ID_Keyboard,
+  INTERFACE_ID_ExtraKeys,
 };
 
 /** Endpoint address of the Keyboard HID reporting IN endpoint. */
@@ -19,8 +20,11 @@ enum InterfaceDescriptors {
 /** Endpoint address of the CDC host-to-device data OUT endpoint. */
 #define CDC_RX_EPADDR (ENDPOINT_DIR_OUT | 4)
 
+#define EXTRAKEY_EPADDR (ENDPOINT_DIR_IN | 5)
+
 /** Size in bytes of the Keyboard HID reporting IN endpoint. */
 #define KEYBOARD_EPSIZE 8
+#define EXTRAKEY_EPSIZE 8
 
 /** Size in bytes of the CDC device-to-host notification IN endpoint. */
 #define CDC_NOTIFICATION_EPSIZE 8
