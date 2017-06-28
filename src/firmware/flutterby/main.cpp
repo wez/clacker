@@ -103,7 +103,13 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
   KeyEntry loadEntry(uint8_t scanCode) {
     auto layerMap =
         keyMapData + (currentLayer * Matrix::RowCount * Matrix::ColCount);
-    return progMemLoad(((KeyEntry*)(layerMap)) + scanCode - 1);
+    auto entry = progMemLoad(((KeyEntry*)(layerMap)) + scanCode - 1);
+    if (currentLayer > 0 && entry.raw == 0) {
+      // Try base layer. TODO: when using layer stack, walk up the stack
+      layerMap = keyMapData;
+      entry = progMemLoad(((KeyEntry*)(layerMap)) + scanCode - 1);
+    }
+    return entry;
   }
 
   void updateKeyState() {
