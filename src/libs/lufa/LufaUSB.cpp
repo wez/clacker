@@ -477,6 +477,10 @@ void LufaUSB::run() {
       switch (cmd.CommandType) {
         case KeyReport:
           memcpy(&pendingReport_, &cmd.u.report, sizeof(pendingReport_));
+          if (USB_DeviceState == DEVICE_STATE_Suspended &&
+              USB_Device_RemoteWakeupEnabled) {
+            USB_Device_SendRemoteWakeup();
+          }
           break;
         case ExtraKeyReport:
 
