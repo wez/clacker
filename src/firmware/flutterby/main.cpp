@@ -215,6 +215,18 @@ struct scanner : public Task<scanner, configMINIMAL_STACK_SIZE * 2> {
             // If we tapped the key then we emit the key code
             if (k.eventTime - k.priorTime <= TappingInterval) {
               report.addKey(action.dual.code);
+
+              // Avoid the modifiers from the down state bleeding
+              // into the present one for the dual role tap by
+              // delaying for long enough that the prior report
+              // was fully picked up
+              {
+                lufa::Report empty;
+                empty.clear();
+                empty.mods = report.mods;
+                usb.basicReport(empty);
+                delayMilliseconds(32);
+              }
             }
             break;
           case MacroKey:
