@@ -99,9 +99,9 @@ struct DispatcherTask : public Task<
     for (auto& k : keyState_) {
       if (k.scanCode != 0 && k.eventTime >= lastStateTick_) {
         auto action = loadEntry(k.scanCode);
-        log("Consider layer, ");
+        log(makeConstString("Consider layer, "));
         logKey(action);
-        log("\r\n");
+        log(makeConstString("\r\n"));
         if (action.layer.type != LayerKey) {
           continue;
         }
@@ -164,9 +164,9 @@ struct DispatcherTask : public Task<
         }
       } else if (k.eventTime > lastStateTick_) {
         logln(
-            "key eventTime ",
+            makeConstString("key eventTime "),
             k.eventTime,
-            " >= lastStateTick ",
+            makeConstString(" >= lastStateTick "),
             lastStateTick_);
         // We just released this key
         auto action = loadEntry(k.scanCode);
@@ -286,13 +286,13 @@ struct DispatcherTask : public Task<
 
     for (auto rowNum = 0; rowNum < Matrix::RowCount; ++rowNum) {
       auto current = scanner_.current().rows[rowNum];
-      log("row", rowNum, " ");
+      log(makeConstString("row"), rowNum, makeConstString(" "));
       for (auto colNum = 0; colNum < Matrix::ColCount; ++colNum) {
         auto mask = 1 << colNum;
         int down = (current & mask) ? 1 : 0;
         log(down);
       }
-      log("\r\n");
+      log(makeConstString("\r\n"));
     }
   }
 
