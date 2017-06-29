@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "src/libs/progmem/ProgMem.h"
+#include "src/libs/result/Logging.h"
 
 namespace clacker {
 
@@ -214,6 +215,8 @@ union KeyEntry {
   constexpr KeyEntry(DualRoleKeyEntry b) : dual(b) {}
 };
 
+void logKey(const KeyEntry& ent);
+
 // An application-provided function to execute a user-defined function
 extern void performUserDefinedFunction(uint16_t fnid);
 
@@ -240,8 +243,4 @@ enum MacroKeyDisposition {
   // down <-> up
   MacroKeyToggle = 3,
 };
-
-// An application-provided function to return an iterator to the specified
-// macro sequence.
-extern ProgMemIter<uint8_t> lookupMacroDefinition(uint16_t macroid);
 }

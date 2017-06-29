@@ -1,52 +1,15 @@
 #pragma once
 #include <LUFA/Drivers/USB/USB.h>
+#include "src/libs/keyprocessor/Dispatcher.h"
 #include "src/libs/tasks/Queue.h"
 #include "src/libs/tasks/Tasks.h"
+
 namespace clacker {
 namespace lufa {
 
 enum CommandType {
   KeyReport,
   ExtraKeyReport,
-};
-
-struct Report {
-  uint8_t mods;
-  uint8_t keys[6];
-
-  void addKey(uint8_t key) __attribute__((noinline)) {
-    for (auto& k : keys) {
-      if (k == 0) {
-        k = key;
-        return;
-      }
-    }
-  }
-
-  void clearKey(uint8_t key) __attribute__((noinline)) {
-    for (auto& k : keys) {
-      if (k == key) {
-        k = 0;
-        return;
-      }
-    }
-  }
-
-  void toggleKey(uint8_t key) __attribute__((noinline)) {
-    for (auto& k : keys) {
-      if (k == key) {
-        k = 0;
-        return;
-      }
-    }
-    // If we get here, the key was not pressed so to toggle it
-    // we need to add it now
-    addKey(key);
-  }
-
-  void clear() {
-    memset(this, 0, sizeof(*this));
-  }
 };
 
 struct ExtraReport {

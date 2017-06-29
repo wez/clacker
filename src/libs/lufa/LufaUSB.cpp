@@ -494,7 +494,7 @@ void LufaUSB::run() {
           if (Endpoint_IsReadWriteAllowed()) {
             Endpoint_Write_Stream_LE(&cmd.u.extra, sizeof(cmd.u.extra), NULL);
             Endpoint_ClearIN();
-            logln(makeConstString("sent extra key"), int{cmd.u.extra.usage});
+            logln(makeConstString("sent extra key"), cmd.u.extra.usage);
           } else {
             logln(makeConstString(
                 "timed out waiting for extrakey endpoint to be ready"));

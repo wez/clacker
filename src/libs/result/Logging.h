@@ -14,6 +14,8 @@ void panicReset();
 [[noreturn]] void panicImpl();
 
 void logImpl(int numeric);
+void logImpl(unsigned int numeric);
+void logImpl(uint8_t numeric);
 
 inline void logHelper() {}
 
