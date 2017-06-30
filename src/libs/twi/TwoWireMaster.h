@@ -1,6 +1,7 @@
 #pragma once
 #include "inttypes.h"
 #include "src/libs/result/Result.h"
+#include "src/libs/tasks/Mutex.h"
 namespace clacker {
 
 enum TwiError {
@@ -14,12 +15,10 @@ enum TwiError {
 using TwiResult = Result<Unit, TwiError>;
 
 class TwoWireMaster {
-  TwoWireMaster() = default;
-
  public:
   // Meyers singleton.  Not strictly needed, but future-proofs things
   // in case we need to adopt ISR driven transfers later on.
-  static TwoWireMaster& get();
+  static Synchronized<TwoWireMaster>& get();
 
   void enable(uint32_t busFrequency);
   void disable();

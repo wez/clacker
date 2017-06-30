@@ -60,67 +60,71 @@ enum sx1509_registers {
   RegEventStatusB = 0x1a,
 };
 
-static void set_reg(enum sx1509_registers reg, uint8_t val) {
-  TwoWireMaster::get().write(i2cAddress, 100, uint8_t(reg), val);
+static void
+set_reg(LockedPtr<TwoWireMaster>& twi, enum sx1509_registers reg, uint8_t val) {
+  twi->write(i2cAddress, 100, uint8_t(reg), val);
 }
 
 void SX1509::setup() {
-  TwoWireMaster::get().enable(400000);
+  auto twi = TwoWireMaster::get().lock();
+  twi->enable(400000);
 
   // Software reset
-  set_reg(RegReset, 0x12);
-  set_reg(RegReset, 0x34);
+  set_reg(twi, RegReset, 0x12);
+  set_reg(twi, RegReset, 0x34);
 
   // Set all the pins as inputs
-  set_reg(RegDirA, 0xff);
-  set_reg(RegDirB, 0xff);
+  set_reg(twi, RegDirA, 0xff);
+  set_reg(twi, RegDirB, 0xff);
 
   // Turn on internal pull-ups
-  set_reg(RegPullUpA, 0xff);
-  set_reg(RegPullUpB, 0xff);
+  set_reg(twi, RegPullUpA, 0xff);
+  set_reg(twi, RegPullUpB, 0xff);
 }
 
 // Read all 16 inputs and return them
 uint16_t SX1509::read() {
   uint8_t result[2];
-  TwoWireMaster::get().readBuffer(
+  TwoWireMaster::get().lock()->readBuffer(
       i2cAddress, 1000, uint8_t(DataB), result, sizeof(result));
   return (result[0] << 8) | result[1];
 }
 
 uint16_t SX1509::interruptSources() {
   uint8_t result[2];
-  auto& twi = TwoWireMaster::get();
-  twi.readBuffer(
+  auto twi = TwoWireMaster::get().lock();
+  twi->readBuffer(
       i2cAddress, 1000, uint8_t(RegInterruptSourceB), result, sizeof(result));
 
   // Clear the bits
   uint16_t ones = 0xffff;
-  twi.write(i2cAddress, 1000, uint8_t(RegInterruptSourceB), ones);
+  twi->write(i2cAddress, 1000, uint8_t(RegInterruptSourceB), ones);
 
   return (result[0] << 8) | result[1];
 }
 
 void SX1509::enableInterrupts() {
+  auto twi = TwoWireMaster::get().lock();
   // Trigger an interrupt for both rising and falling events
-  set_reg(RegSenseHighB, 0xff);
-  set_reg(RegSenseLowB, 0xff);
-  set_reg(RegSenseHighA, 0xff);
-  set_reg(RegSenseLowA, 0xff);
+  set_reg(twi, RegSenseHighB, 0xff);
+  set_reg(twi, RegSenseLowB, 0xff);
+  set_reg(twi, RegSenseHighA, 0xff);
+  set_reg(twi, RegSenseLowA, 0xff);
 
   // Enable interrupts
-  set_reg(RegInterruptMaskA, 0x00);
-  set_reg(RegInterruptMaskB, 0x00);
+  set_reg(twi, RegInterruptMaskA, 0x00);
+  set_reg(twi, RegInterruptMaskB, 0x00);
 }
 
 void SX1509::disableInterrupts() {
+  auto twi = TwoWireMaster::get().lock();
   // Disable interrupts
-  set_reg(RegInterruptMaskA, 0xff);
-  set_reg(RegInterruptMaskB, 0xff);
+  set_reg(twi, RegInterruptMaskA, 0xff);
+  set_reg(twi, RegInterruptMaskB, 0xff);
 
-  set_reg(RegSenseHighB, 0);
-  set_reg(RegSenseLowB, 0);
-  set_reg(RegSenseHighA, 0);
-  set_reg(RegSenseLowA, 0);
+  set_reg(twi, RegSenseHighB, 0);
+  set_reg(twi, RegSenseLowB, 0);
+  set_reg(twi, RegSenseHighA, 0);
+  set_reg(twi, RegSenseLowA, 0);
 }
 }

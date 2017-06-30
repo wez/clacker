@@ -24,8 +24,8 @@ static inline TwiResult ErrorResult(uint8_t code) {
   }
 }
 
-TwoWireMaster& TwoWireMaster::get() {
-  static TwoWireMaster twi;
+Synchronized<TwoWireMaster>& TwoWireMaster::get() {
+  static Synchronized<TwoWireMaster> twi;
   return twi;
 }
 

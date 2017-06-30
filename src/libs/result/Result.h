@@ -68,15 +68,15 @@ class Result {
   explicit Result(Value&& other) : state_(State::kVALUE), value_(move(other)) {}
 
   // Copy in error
-  explicit Result(const ErrorType& error, ErrorConstruct)
+  Result(const ErrorType& error, ErrorConstruct)
       : state_(State::kERROR), error_(error) {}
 
   // Move in error
-  explicit Result(ErrorType&& error, ErrorConstruct)
+  Result(ErrorType&& error, ErrorConstruct)
       : state_(State::kERROR), error_(move(error)) {}
 
   // Move construct
-  explicit Result(Result&& other) noexcept : state_(other.state_) {
+  Result(Result&& other) noexcept : state_(other.state_) {
     switch (state_) {
       case State::kEMPTY:
         break;
