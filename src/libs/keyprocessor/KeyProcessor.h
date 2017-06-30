@@ -39,6 +39,8 @@ class KeyboardState {
   bool updateKeyState(uint8_t scanCode, bool down, uint16_t eventTime) {
     auto slot = findSlot(scanCode);
 
+    ageSlots(eventTime);
+
     if (!slot) {
       // Too many keys held down, so there's nothing that we can do
       return false;
@@ -82,6 +84,14 @@ class KeyboardState {
 
  private:
   KeyState keys_[Rollover];
+
+  void ageSlots(uint16_t eventTime) {
+    for (auto& k : keys_) {
+      if (!k.down && eventTime - k.eventTime > TappingInterval) {
+        k.scanCode = 0;
+      }
+    }
+  }
 
   // Find a suitable slot in keys_ to record information about
   // a given scanCode.  May return nullptr if we cannot track any
