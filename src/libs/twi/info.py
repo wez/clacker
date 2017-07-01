@@ -1,3 +1,3 @@
 Library(
     name='twi',
-    deps=['src/libs/lufa:lufa'])
+    deps=['src/libs/tasks:tasks'])

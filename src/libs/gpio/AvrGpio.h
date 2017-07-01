@@ -458,6 +458,54 @@ struct OutputPins {
   }
 };
 
+using NoInputPin = InputPin<NO_PORT, 0>;
+
+template <typename Pin>
+void setupPin() {
+  Pin::setup();
+}
+
+template <>
+inline void setupPin<NoInputPin>() {}
+
+template <typename Pin>
+uint8_t readPin(uint8_t value) {
+  return Pin::read() ? value : 0;
+}
+
+template <>
+constexpr uint8_t readPin<NoInputPin>(uint8_t) {
+  return 0;
+}
+
+template <
+    class T0,
+    class T1 = NoInputPin,
+    class T2 = NoInputPin,
+    class T3 = NoInputPin,
+    class T4 = NoInputPin,
+    class T5 = NoInputPin,
+    class T6 = NoInputPin,
+    class T7 = NoInputPin> // LSB to MSB order
+struct InputPins {
+  static void setup() {
+    setupPin<T0>();
+    setupPin<T1>();
+    setupPin<T2>();
+    setupPin<T3>();
+    setupPin<T4>();
+    setupPin<T5>();
+    setupPin<T6>();
+    setupPin<T7>();
+  }
+
+  static uint8_t read() {
+    return readPin<T0>(1 << 0) | readPin<T1>(1 << 1) | readPin<T2>(1 << 2) |
+        readPin<T3>(1 << 3) | readPin<T4>(1 << 4) | readPin<T5>(1 << 5) |
+        readPin<T6>(1 << 6) | readPin<T7>(1 << 7);
+  }
+};
+
 } // avr
 } // gpio
 } // clacker
