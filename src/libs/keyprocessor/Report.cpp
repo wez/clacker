@@ -2,6 +2,14 @@
 #include "src/libs/keyprocessor/Dispatcher.h"
 namespace clacker {
 
+bool Report::operator==(const Report& other) const {
+  return memcmp(this, &other, sizeof(*this)) == 0;
+}
+bool Report::empty() const {
+  return mods == 0 && keys[0] == 0 && keys[1] == 0 && keys[2] == 0 &&
+      keys[3] == 0 && keys[4] == 0 && keys[5] == 0;
+}
+
 void Report::addKey(uint8_t key) {
   for (auto& k : keys) {
     if (k == 0) {

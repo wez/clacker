@@ -527,42 +527,6 @@ void LufaUSB::basicReport(const Report& report) {
   Command cmd;
   cmd.CommandType = KeyReport;
   cmd.u.report = report;
-  static bool lastNull;
-  bool shouldLog = true;
-
-  if (report.mods == 0) {
-    bool isNull = true;
-    for (int i = 0; i < 6; ++i) {
-      if (report.keys[i]) {
-        isNull = false;
-        break;
-      }
-    }
-    if (isNull && lastNull) {
-      shouldLog = false;
-    }
-    lastNull = isNull;
-  } else {
-    lastNull = false;
-  }
-
-  if (shouldLog) {
-    logln(
-        makeConstString("report: "),
-        int{report.mods},
-        makeConstString(" "),
-        int{report.keys[0]},
-        makeConstString(" "),
-        int{report.keys[1]},
-        makeConstString(" "),
-        int{report.keys[2]},
-        makeConstString(" "),
-        int{report.keys[3]},
-        makeConstString(" "),
-        int{report.keys[4]},
-        makeConstString(" "),
-        int{report.keys[5]});
-  }
   queue_.send(cmd);
 }
 }

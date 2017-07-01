@@ -12,5 +12,7 @@ struct Report {
   void clearKey(uint8_t key);
   void toggleKey(uint8_t key);
   void clear();
+  bool empty() const;
+  bool operator==(const Report&) const;
 } __attribute__((packed));
 }

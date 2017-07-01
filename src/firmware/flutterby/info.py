@@ -5,6 +5,7 @@ Firmware(
     deps=['src/libs/tasks:tasks', 'src/libs/progmem:progmem', ':matrix',
           'src/libs/lufa:lufa',
           'src/libs/sx1509:sx1509',
+          'src/libs/spi:spi',
           ],
     srcs=['main.cpp'])
 

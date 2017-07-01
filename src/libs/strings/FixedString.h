@@ -95,6 +95,24 @@ class StringBase {
     return compareSequences(begin(), end(), other, other + ::strlen(other)) !=
         0;
   }
+
+  template <typename OtherDerived, typename OtherIter>
+  bool endsWith(const StringBase<OtherDerived, Char, OtherIter>& other) const {
+    if (size() < other.size()) {
+      return false;
+    }
+    return compareSequences(
+               end() - other.size(), end(), other.begin(), other.end()) == 0;
+  }
+
+  bool endsWith(const Char* other) const {
+    auto otherSize = ::strlen(other);
+    if (size() < otherSize) {
+      return false;
+    }
+    return compareSequences(
+               end() - otherSize, end(), other, other + otherSize) == 0;
+  }
 };
 
 // MutableString provides the implementation for runtime constructed
@@ -140,6 +158,9 @@ class MutableString
   const_iterator end() const {
     return data_ + size_;
   }
+  void clear() {
+    size_ = 0;
+  }
   size_t size() const {
     return size_;
   }
@@ -152,6 +173,13 @@ class MutableString
   }
   const Char* c_str() const {
     return data_;
+  }
+
+  void rtrim() {
+    while (size_ > 0 &&
+           (data_[size_ - 1] == '\r' || data_[size_ - 1] == '\n')) {
+      --size_;
+    }
   }
 
   // Append len bytes of data from src.
@@ -193,6 +221,41 @@ class MutableString
   template <typename Stringy>
   bool append(const Stringy& other) {
     return append(other.begin(), other.end());
+  }
+
+  char _toHexDigit(uint8_t b) __attribute__((noinline)) {
+    if (b > 9) {
+      return 'A' + (b - 10);
+    }
+    return '0' + b;
+  }
+
+  bool appendHex(uint8_t b) __attribute__((noinline)) {
+    char digit;
+    digit = _toHexDigit(b >> 4);
+    if (!append(&digit, 1)) {
+      return false;
+    }
+    digit = _toHexDigit(b & 0xf);
+    return append(&digit, 1);
+  }
+
+  bool appendHex(uint16_t b) __attribute__((noinline)) {
+    char digit;
+    digit = _toHexDigit(b >> 12);
+    if (!append(&digit, 1)) {
+      return false;
+    }
+    digit = _toHexDigit((b >> 8) & 0xf);
+    if (!append(&digit, 1)) {
+      return false;
+    }
+    digit = _toHexDigit((b >> 4) & 0xf);
+    if (!append(&digit, 1)) {
+      return false;
+    }
+    digit = _toHexDigit((b & 0xf) & 0xf);
+    return append(&digit, 1);
   }
 };
 

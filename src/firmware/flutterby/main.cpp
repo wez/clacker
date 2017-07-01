@@ -6,6 +6,7 @@
 #include "outputs/src/firmware/flutterby/matrix/matrix-matrix.h"
 #include "src/libs/keymatrix/ScannerWithExpander.h"
 #include "src/libs/keyprocessor/KeyProcessor.h"
+#include "src/libs/spifriend/SPIFriend.h"
 #include "src/libs/sx1509/sx1509.h"
 
 // The keyboard matrix is attached to the following pins:
@@ -20,6 +21,14 @@
 // (physical pin 12, PCINT7)
 
 using namespace clacker;
+
+using FlutterbyBLE = SPIFriend<
+    AlwaysOnPowerPin, // ResetPin
+    gpio::avr::OutputPin<gpio::avr::PortD, 3>, // CSPin
+    gpio::avr::InputPin<gpio::avr::PortC, 6>, // IRQPin
+    false, // useHardwareReset
+    gpio::avr::OutputPin<gpio::avr::PortD, 2> // PowerPin
+    >;
 
 // PC7 has the led
 using Led = gpio::avr::OutputPin<gpio::avr::PortC, 7>;
@@ -69,17 +78,45 @@ struct blinker : public Task<blinker> {
   }
 };
 
+FlutterbyBLE bleTask;
+
 struct FlutterbyDispatcher {
+  uint8_t lastUsbState;
+
+  uint8_t checkConnectivity() {
+    if (lastUsbState != DEVICE_STATE_Configured &&
+        USB_DeviceState == DEVICE_STATE_Configured) {
+      // We've plugged in on USB.  Clear the BLE key state
+      Report report;
+      report.clear();
+      bleTask.basicReport(report);
+      bleTask.consumerKey(0);
+    }
+
+    lastUsbState = USB_DeviceState;
+    return lastUsbState;
+  }
+
   void consumerKey(uint16_t code) {
-    lufa::LufaUSB::get().consumerKey(code);
+    if (checkConnectivity() == DEVICE_STATE_Configured) {
+      lufa::LufaUSB::get().consumerKey(code);
+    } else {
+      bleTask.consumerKey(code);
+    }
   }
 
   void systemKey(uint16_t code) {
-    lufa::LufaUSB::get().systemKey(code);
+    if (checkConnectivity() == DEVICE_STATE_Configured) {
+      lufa::LufaUSB::get().systemKey(code);
+    }
   }
 
   void basicReport(const Report& report) {
-    lufa::LufaUSB::get().basicReport(report);
+    if (checkConnectivity() == DEVICE_STATE_Configured) {
+      lufa::LufaUSB::get().basicReport(report);
+    } else {
+      bleTask.basicReport(report);
+    }
   }
 };
 
@@ -97,4 +134,5 @@ void launchTasks(void) {
   lufa::LufaUSB::get().start().panicIfError();
   scannerTask.start().panicIfError();
   blinkerTask.start().panicIfError();
+  bleTask.start().panicIfError();
 }
