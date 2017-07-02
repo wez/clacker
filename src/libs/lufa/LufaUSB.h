@@ -29,6 +29,7 @@ class LufaUSB : public Task<LufaUSB, configMINIMAL_STACK_SIZE * 2, 1> {
   using CommandQueue = Queue<Command, 8>;
   CommandQueue queue_;
   Report pendingReport_;
+  volatile uint8_t lastState_;
 
   void tick();
 
@@ -38,6 +39,7 @@ class LufaUSB : public Task<LufaUSB, configMINIMAL_STACK_SIZE * 2, 1> {
   void run();
 
   void populateReport(USB_KeyboardReport_Data_t* ReportData);
+  void maybeWakeTask();
 
   void consumerKey(uint16_t code);
   void systemKey(uint16_t code);

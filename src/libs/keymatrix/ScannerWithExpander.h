@@ -50,9 +50,10 @@ class MatrixScannerWithExpander {
     return prior_;
   }
 
+  Expander expander;
+
  protected:
   Matrix matrix_;
   Matrix prior_;
-  Expander expander;
 };
 }

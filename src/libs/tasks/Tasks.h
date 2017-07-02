@@ -74,5 +74,15 @@ class Task {
         xTaskCreate(runTask, "", StackSize, this, Priority, &t_));
 #endif
   }
+
+#ifdef INCLUDE_xTaskAbortDelay
+  bool abortDelay() {
+    return xTaskAbortDelay(t_);
+  }
+#endif
+
+  const TaskHandle_t handle() const {
+    return t_;
+  }
 };
 }

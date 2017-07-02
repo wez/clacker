@@ -55,11 +55,16 @@ struct DispatcherTask : public Task<
   // Convert the interval to ticks
   static constexpr uint32_t TappingInterval =
       TappingIntervalMs / portTICK_PERIOD_MS;
+  static constexpr uint32_t ScanInterval = 30;
+  // Idle period for power management purposes
+  static constexpr uint32_t IdlePeriod =
+      (10ul * 60ul * 1000ul) / portTICK_PERIOD_MS;
   Scanner scanner_;
   KeyboardState<Rollover, TappingInterval> keyState_;
   uint8_t currentLayer_;
   uint16_t lastStateTick_;
   Dispatcher dispatcher_;
+  uint32_t idleCount_;
 
   KeyEntry loadEntry(uint8_t scanCode) {
     auto layerMap =
@@ -302,11 +307,19 @@ struct DispatcherTask : public Task<
     lastStateTick_ = 0;
 
     while (true) {
-      delayMilliseconds(30);
+      delayMilliseconds(ScanInterval);
       if (scanner_.scanMatrix()) {
         logMatrixState();
+        idleCount_ = 0;
+      } else {
+        ++idleCount_;
       }
       updateKeyState();
+
+      if (idleCount_ > IdlePeriod) {
+        dispatcher_.idleSleep();
+        idleCount_ = 0;
+      }
     }
   }
 };

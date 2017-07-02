@@ -474,7 +474,7 @@ uint8_t readPin(uint8_t value) {
 }
 
 template <>
-constexpr uint8_t readPin<NoInputPin>(uint8_t) {
+inline uint8_t readPin<NoInputPin>(uint8_t) {
   return 0;
 }
 

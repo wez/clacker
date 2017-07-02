@@ -91,6 +91,9 @@ struct FlutterbyDispatcher {
       report.clear();
       bleTask.basicReport(report);
       bleTask.consumerKey(0);
+
+      // may as well turn off bluetooth while we're here
+      bleTask.powerDown();
     }
 
     lastUsbState = USB_DeviceState;
@@ -118,16 +121,54 @@ struct FlutterbyDispatcher {
       bleTask.basicReport(report);
     }
   }
+
+  void idleSleep();
 };
 
-using ScannerTask = DispatcherTask<
-    FlutterbyDispatcher,
-    Matrix,
-    Scanner,
-    200 // TappingInterval
-    >;
+class ScannerTask : public DispatcherTask<
+                        FlutterbyDispatcher,
+                        Matrix,
+                        Scanner,
+                        200 // TappingInterval
+                        > {
+ public:
+  // Called by the matrix scanner when the matrix has remained idle
+  // for a long enough period; it enables interrupt driven mode for
+  // the IO expander then puts the task to sleep until it gets
+  // notified by the ISR.
+  void idleSleep() {
+    logln(makeConstString("idleSleep begin"));
+    scanner_.expander.enableInterrupts();
+    {
+      CriticalSection cs;
+      PCICR |= 1 << PCIE0;
+      PCMSK0 |= 1 << PCINT7;
+    }
+    // Sleep until awoken by the ISR
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    {
+      CriticalSection cs;
+      PCICR &= ~(1 << PCIE0);
+      PCMSK0 &= ~(1 << PCINT7);
+    }
+    scanner_.expander.disableInterrupts();
+    logln(makeConstString("idleSleep end"));
+  }
+};
 ScannerTask scannerTask;
 blinker blinkerTask;
+
+ISR(PCINT0_vect) {
+  vTaskNotifyGiveFromISR(scannerTask.handle(), nullptr);
+}
+
+void FlutterbyDispatcher::idleSleep() {
+  bleTask.powerDown();
+  scannerTask.idleSleep();
+  if (USB_DeviceState != DEVICE_STATE_Configured) {
+    bleTask.powerUp();
+  }
+}
 
 void launchTasks(void) {
   Led::setup();

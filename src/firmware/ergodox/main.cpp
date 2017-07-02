@@ -217,6 +217,7 @@ struct ErgodoxDispatcher {
   void basicReport(const Report& report) {
     lufa::LufaUSB::get().basicReport(report);
   }
+  void idleSleep() {}
 };
 
 DispatcherTask<

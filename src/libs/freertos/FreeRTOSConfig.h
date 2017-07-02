@@ -67,3 +67,5 @@
 #define INCLUDE_xTaskGetIdleTaskHandle 0
 #define INCLUDE_xTaskGetCurrentTaskHandle 0
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
+#define INCLUDE_xTaskAbortDelay 1
+#define INCLUDE_eTaskGetState 1

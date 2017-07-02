@@ -110,9 +110,13 @@ class SPIFriend
           SPIFriend<ResetPin, CSPin, IRQPin, useHardwareReset, PowerPin>,
           configMINIMAL_STACK_SIZE * 3,
           2> {
-  bool connected_;
-  bool initialized_;
-  bool configured_;
+  enum {
+    Initializing,
+    Configuring,
+    Connecting,
+    Connected,
+    Disabled,
+  } state_;
   Report lastReport_;
   SPI::Settings settings_;
   using ChipSelect = ChipSelectHolder<CSPin>;
@@ -120,6 +124,8 @@ class SPIFriend
   enum CommandType {
     KeyReport,
     ConsumerKeyReport,
+    PowerUp,
+    PowerDown,
   };
 
   struct Command {
@@ -159,7 +165,6 @@ class SPIFriend
       }
       _delay_us(1);
     } while (xTaskGetTickCount() - startTick < timeout);
-    logln(makeConstString("waitForSpiData fail"));
     return false;
   }
 
@@ -192,7 +197,6 @@ class SPIFriend
       return true;
 
     } while (xTaskGetTickCount() - startTick < timeout);
-    logln(makeConstString("spi not ready"));
     return false;
   }
 
@@ -203,12 +207,11 @@ class SPIFriend
     PowerPin::setup();
 
     CSPin::set();
-    connected_ = false;
+    state_ = Initializing;
   }
 
   bool reset() {
     lastReport_.clear();
-    logln(makeConstString("reset ble"));
     PowerPin::set();
     if (useHardwareReset) {
       ResetPin::set();
@@ -223,7 +226,6 @@ class SPIFriend
       }
     }
 
-    delayMilliseconds(1000);
     return true;
   }
 
@@ -237,7 +239,6 @@ class SPIFriend
       SdepMsg msg(
           spifriend::BleAtWrapper, start, spifriend::SdepMaxPayload, true);
       if (!send(&msg, timeout)) {
-        logln(makeConstString("send failed"));
         return false;
       }
       start += spifriend::SdepMaxPayload;
@@ -245,14 +246,12 @@ class SPIFriend
 
     SdepMsg msg(spifriend::BleAtWrapper, start, end - start, false);
     if (!send(&msg, timeout)) {
-      logln(makeConstString("send final failed"));
       return false;
     }
 
     result.clear();
     while (true) {
       if (!recv(&msg, timeout)) {
-        logln(makeConstString("recv fail"));
         return false;
       }
       result.append(msg.payload, msg.len);
@@ -261,14 +260,13 @@ class SPIFriend
         break;
       }
     }
-    logln("{", result, "}");
 
     // Now we're looking for "OK" at the end of the textual buffer
     result.rtrim();
     if (result.endsWith(makeConstString("OK"))) {
       return true;
     }
-    logln(makeConstString("not ok in {"), result, "}");
+    // logln(makeConstString("not ok in {"), result, "}");
     return false;
   }
 
@@ -292,33 +290,49 @@ class SPIFriend
         atCommand(makeConstString("ATZ"), resp, tickTimeout);
   }
 
+  // Advances state machine, returns a wait duration
+  uint32_t advanceState() {
+    switch (state_) {
+      case Initializing:
+        if (reset()) {
+          state_ = Configuring;
+        }
+        delayMilliseconds(1000);
+        return 0;
+      case Configuring:
+        if (configureKeyboard()) {
+          state_ = Connecting;
+        }
+        delayMilliseconds(1000);
+        return 0;
+      case Connecting:
+        state_ = Connected;
+        return 1000;
+      case Disabled:
+        return kInfiniteMs;
+    }
+  }
+
  public:
   void run() {
     hwinit();
-
-    do {
-      initialized_ = reset();
-      delayMilliseconds(1000);
-    } while (!initialized_);
-    logln(makeConstString("ble init"));
-
-    do {
-      configured_ = configureKeyboard();
-      delayMilliseconds(1000);
-    } while (!configured_);
-    logln(makeConstString("configd"));
 
     while (true) {
       Command cmd;
       FixedString<48> cmdStr;
 
-      if (queue_.recv(cmd, 1000).hasValue()) {
+      auto delay = advanceState();
+
+      if (queue_.recv(cmd, delay).hasValue()) {
+        cmdStr.clear();
         switch (cmd.CommandType) {
           case KeyReport:
+            if (state_ != Connected) {
+              break;
+            }
             if (cmd.u.report == lastReport_) {
               break;
             }
-            cmdStr.clear();
             cmdStr.append(makeConstString("AT+BLEKEYBOARDCODE="));
             cmdStr.appendHex(cmd.u.report.mods);
             cmdStr.append(makeConstString("-00-"));
@@ -337,10 +351,24 @@ class SPIFriend
             lastReport_ = cmd.u.report;
             break;
           case ConsumerKeyReport:
-            cmdStr.clear();
+            if (state_ != Connected) {
+              break;
+            }
             cmdStr.append(makeConstString("AT+BLEHIDCONTROLKEY=0x"));
             cmdStr.appendHex(cmd.u.consumer);
             atCommand(cmdStr, cmdStr, 1000 / portTICK_PERIOD_MS);
+            break;
+          case PowerDown:
+            PowerPin::clear();
+            if (!PowerPin::read()) {
+              state_ = Disabled;
+            }
+            break;
+          case PowerUp:
+            if (!PowerPin::read()) {
+              PowerPin::set();
+              state_ = Initializing;
+            }
             break;
         }
       }
@@ -356,6 +384,18 @@ class SPIFriend
     Command cmd;
     cmd.CommandType = ConsumerKeyReport;
     cmd.u.consumer = code;
+    queue_.send(cmd);
+  }
+
+  void powerDown() {
+    Command cmd;
+    cmd.CommandType = PowerDown;
+    queue_.send(cmd);
+  }
+
+  void powerUp() {
+    Command cmd;
+    cmd.CommandType = PowerUp;
     queue_.send(cmd);
   }
 };

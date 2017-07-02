@@ -388,6 +388,7 @@ extern "C" void EVENT_USB_Device_ControlRequest(void) {
 
 extern "C" void EVENT_USB_Device_StartOfFrame(void) {
   HID_Device_MillisecondElapsed(&lufa_Keyboard_HID_Interface);
+  LufaUSB::get().maybeWakeTask();
 }
 
 extern "C" void EVENT_CDC_Device_ControLineStateChanged(
@@ -420,6 +421,13 @@ LufaUSB& LufaUSB::get() {
   return usb;
 }
 
+void LufaUSB::maybeWakeTask() {
+  if (lastState_ == DEVICE_STATE_Unattached ||
+      lastState_ == DEVICE_STATE_Suspended) {
+    abortDelay();
+  }
+}
+
 void LufaUSB::tick() {
   // We need to disable interrupts here, otherwise something
   // in lufa gets unhappy and breaks the scheduler.
@@ -448,27 +456,27 @@ void LufaUSB::run() {
     USB_Init();
   }
 
-  auto lastState = USB_DeviceState;
-  uint16_t delay = 0;
+  lastState_ = USB_DeviceState;
+  uint32_t delay = 0;
   TickType_t stateTick = xTaskGetTickCount();
 
   while (true) {
     Command cmd;
 
     auto now = xTaskGetTickCount();
-    if (lastState != USB_DeviceState) {
-      lastState = USB_DeviceState;
+    if (lastState_ != USB_DeviceState) {
+      lastState_ = USB_DeviceState;
       stateTick = now;
       delay = 0;
     }
-    if (delay == 0 && (lastState == DEVICE_STATE_Unattached ||
-                       lastState == DEVICE_STATE_Suspended)) {
+    if (delay == 0 && (lastState_ == DEVICE_STATE_Unattached ||
+                       lastState_ == DEVICE_STATE_Suspended)) {
       if ((now - stateTick) > TickType_t{10000} / portTICK_PERIOD_MS) {
         // If we're not connected to the host then we don't need to
         // check for things as frequently.   This will allow us to
         // sleep for longer.  We give it a few seconds grace to
         // de-bounce around plug/unplug events
-        delay = 1000;
+        delay = kInfiniteMs;
       }
     }
 

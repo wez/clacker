@@ -3,6 +3,9 @@
 
 namespace clacker {
 TickType_t millisecondsToTicks(uint32_t ms) {
+  if (ms == kInfiniteMs) {
+    return portMAX_DELAY;
+  }
 #ifdef ms2tick
   // The NRF52 port provides this macro
   return ms2tick(ms);
