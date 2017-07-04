@@ -1,11 +1,27 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+# Some setup to adjust the logging defaults for skidl.  This needs to
+# happen before we import skidl.
+from tqdm import tqdm
+import logging
+
+class SuppressSkidlWarning(logging.Filter):
+    ''' suppress this warning; we take care of this for ourselves
+        after we've imported skidl '''
+    def filter(self, record):
+        return not record.getMessage().startswith(
+                'KISYSMOD environment variable is missing')
+
+def fixup_skidl_logging_pre():
+    logging.getLogger().addFilter(SuppressSkidlWarning())
+
+fixup_skidl_logging_pre()
+
 from . import component
 from . import kicadpcb
 import skidl
 import collections
-from tqdm import tqdm
 
 skidl.lib_search_paths[skidl.KICAD] += [
     'kicad/symbols',
