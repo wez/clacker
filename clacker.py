@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -11,6 +11,7 @@ import subprocess
 
 def munge_path():
     ''' Find our locally installed deps '''
+    sys.path.insert(1, os.path.join(os.path.dirname(__file__), 'pykicad'))
     depdir = os.path.join(os.path.dirname(__file__), 'pydeps')
     for root, dirs, files in os.walk(depdir):
         if 'site-packages' in dirs:
@@ -22,7 +23,7 @@ def munge_path():
 
 def do_setup(args=None):
     subprocess.check_call(
-        ['pip', 'install', '-r', 'requirements.txt', '--isolated', '--root', 'pydeps'])
+        ['pip3', 'install', '-r', 'requirements.txt', '--isolated', '--root', 'pydeps'])
 
 
 if not munge_path():
@@ -33,6 +34,7 @@ if not munge_path():
 from tools import (
     infofile,
     firmware,
+    pcb,
     projectdir,
     targets,
     tidy,
@@ -46,6 +48,10 @@ def list_firmware():
 
 def list_tests():
     return [f for f in targets.Targets.values() if isinstance(f, test.UnitTest)]
+
+
+def list_pcbs():
+    return [f for f in targets.Targets.values() if isinstance(f, pcb.Pcb)]
 
 
 def do_build(args):
@@ -71,6 +77,22 @@ def do_upload(args):
         sys.exit(1)
     f.build()
     f.upload(args.port)
+
+
+def do_genpcb(args):
+    if args.pcb:
+        to_build = [targets.Targets.get(name) for name in args.pcb]
+
+        for f in to_build:
+            if not isinstance(f, pcb.Pcb):
+                sys.stderr.write('%s is not a pcb target\n' % f.full_name)
+                sys.exit(1)
+
+    else:
+        to_build = list_pcbs()
+
+    for f in to_build:
+        f.build()
 
 
 def do_tidy(args):
@@ -191,5 +213,17 @@ clean_parser = subparsers.add_parser('clean',
 
 clean_parser.set_defaults(func=do_clean)
 
+genpcb_parser = subparsers.add_parser('gen-pcb', help='Generate PCB',
+                                      description='''
+    Generate a PCB from a keyboard layout.
+    If no pcb is specified, generates all of them.
+    You may run `clacker.py list-pcbs` to see a list of
+    pcb projects that can be passed to the build command.
+    ''')
+genpcb_parser.add_argument(
+    'pcb', help='which pcb to generate', nargs='*')
+genpcb_parser.set_defaults(func=do_genpcb)
+
 args = parser.parse_args()
-args.func(args)
+if hasattr(args, 'func'):
+    args.func(args)

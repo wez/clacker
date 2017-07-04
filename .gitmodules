@@ -1,0 +1,4 @@
+[submodule "pykicad"]
+	path = pykicad
+	url = git@github.com:wez/pykicad.git
+	branch = line

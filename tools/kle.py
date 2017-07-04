@@ -7,6 +7,7 @@ import shapely.affinity
 # Ref: https://github.com/ijprest/keyboard-layout-editor/wiki/Serialized-Data-Format
 
 SWITCH_SPACING = 19.05
+SWITCH_HOLE = 14
 
 
 class Key(object):
@@ -101,6 +102,16 @@ class Key(object):
 
         return self.rotated(p, unit)
 
+    def switch_hole(self, unit=SWITCH_SPACING):
+        x, y = self.centroid(unit)
+        w = SWITCH_HOLE
+        h = SWITCH_HOLE
+        p = shapely.geometry.box(
+            x - (w / 2), y - (h / 2), x + (w / 2), y + (h / 2))
+
+        return shapely.affinity.rotate(p, self.rotation_angle,
+                                       origin=(x, y))
+
     def centroid(self, unit=SWITCH_SPACING):
         c = tuple(self.polygon(unit).centroid.coords)[0]
         return c[0], c[1]
@@ -145,7 +156,7 @@ class Layout(object):
                 continue  # skip metadata item
             row = []
             for item in rowdata:
-                if not isinstance(item, (unicode, str)):
+                if not isinstance(item, str):
                     current.update_with(item)
                     continue
 

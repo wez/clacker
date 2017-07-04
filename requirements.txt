@@ -1,4 +1,7 @@
-pykicad
+networkx
 pyserial
+scipy
 shapely
 skidl
+svgwrite
+tqdm

@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
-import StringIO
+from io import StringIO
 
 
 def mkdir_p(d):
@@ -10,7 +10,7 @@ def mkdir_p(d):
         os.makedirs(d)
 
 
-class WriteFileIfChanged(StringIO.StringIO, object):
+class WriteFileIfChanged(StringIO, object):
     ''' A helper for generating a source file.
         Usage is:
            with WriteFileIfChanged('filename') as f:
@@ -20,7 +20,7 @@ class WriteFileIfChanged(StringIO.StringIO, object):
         are changed, which avoids rebuilding dependent code. '''
 
     def __init__(self, filename):
-        super(WriteFileIfChanged, self).__init__()
+        super().__init__()
         self.filename = filename
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -42,5 +42,5 @@ class WriteFileIfChanged(StringIO.StringIO, object):
 
             f.seek(0)
             f.truncate()
-            f.write(towrite)
+            f.write(towrite.encode('utf-8'))
             f.truncate()

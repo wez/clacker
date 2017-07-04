@@ -88,7 +88,7 @@ class Arduino(object):
         out = subprocess.check_output(cmd)
         prefs = {}
         for line in out.splitlines():
-            cols = line.split("=", 1)
+            cols = line.decode('utf-8').split("=", 1)
             if len(cols) == 2:
                 prefs[cols[0]] = cols[1]
         return prefs

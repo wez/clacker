@@ -6,6 +6,23 @@ import sys
 import subprocess
 
 
+ignore_dirs = [
+    '.git',
+    'src/testing/lest',
+    'pydeps',
+    'outputs/',
+    'pykicad',
+    'kicad-deps',
+]
+
+
+def is_ignored(path):
+    for s in ignore_dirs:
+        if s in path:
+            return True
+    return False
+
+
 def find_sources(dir):
     py = []
     cpp = []
@@ -13,18 +30,7 @@ def find_sources(dir):
     for d, dirs, files in os.walk(dir):
         for f in files:
             full = os.path.join(d, f)
-            if '.git' in full:
-                # Don't pull in external git repo code
-                continue
-
-            if 'src/testing/lest' in full:
-                continue
-
-            if 'pydeps' in full:
-                continue
-
-            if 'outputs/' in full:
-                # Don't format generated code(!)
+            if is_ignored(full):
                 continue
 
             _, ext = os.path.splitext(f)

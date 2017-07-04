@@ -8,6 +8,7 @@ from . import (
     firmware,
     keymatrix,
     library,
+    pcb,
     projectdir,
     test
 )
@@ -29,7 +30,7 @@ def load_info_file(filename):
         def export(module, g):
             ''' Export globals into g '''
             for k in dir(module):
-                if k[0] in string.uppercase:
+                if k[0] in string.ascii_uppercase:
                     g[k] = getattr(module, k)
 
         export(firmware, g)
@@ -37,5 +38,6 @@ def load_info_file(filename):
         export(library, g)
         export(board, g)
         export(test, g)
+        export(pcb, g)
 
         eval(code, g)

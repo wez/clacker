@@ -4,7 +4,7 @@ from __future__ import division
 from __future__ import absolute_import
 import svgwrite
 from shapely.affinity import translate
-from utils import bounds_of
+from . import utils
 
 SVG_PADDING = 5  # mm
 
@@ -33,7 +33,7 @@ class SVG(object):
         # The overall bounds of the shapes helps us figure out how to translate
         # the coords to ensure that all coords are positive and fit inside the
         # svg document.
-        bounds = bounds_of(self._multi_poly)
+        bounds = utils.bounds_of(self._multi_poly)
         # Give some extra space for padding
         bounds = [bounds[0] - padding,
                   bounds[1] - padding,
