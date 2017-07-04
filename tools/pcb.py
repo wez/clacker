@@ -132,6 +132,16 @@ class Pcb(targets.Target):
 
         circuit.save(os.path.join(outputs, self.name))
 
+        # We'd like to know what the matrix pin assignment was in the end,
+        # because we need to generate a matrix scanner for it.
+        # TODO: store this in a map.  Also need to augment the MCU component
+        # type so that we can translate the pin names to the appropriate
+        # code for the MCU.
+        for net in row_nets + col_nets:
+            for pin in net.pins:
+                if pin.part == cmcu.part:
+                    print('%s -> %s' % (net.name, pin.name))
+
         return circuit
 
     def case_bottom(self, shapes, outputs):
