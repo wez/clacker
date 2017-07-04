@@ -55,6 +55,8 @@ class Pcb(targets.Target):
         bounds = shapes['bottom_plate'].envelope
         circuit = circuitlib.Circuit()
         cmcu = circuit.feather()
+        # cmcu.reserve_spi()
+        # cmcu.reserve_i2c()
         cmcu.set_position(translate(cxlate(shapes['mcu']), 12, 26))
         cmcu.set_rotation(90)
 

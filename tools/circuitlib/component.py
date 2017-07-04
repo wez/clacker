@@ -6,10 +6,11 @@ from . import kicadpcb
 
 class Component(object):
 
-    def __init__(self, part, footprint, module, ref=None, hide_value=True):
+    def __init__(self, part, footprint, module, circuit, ref=None, hide_value=True):
         self.position = Point(0, 0)
         self.rotation = 0
         self._ref = ref
+        self.circuit = circuit
 
         self.part = part  # the skidl part
         self.footprint = footprint  # the footprint name
@@ -80,9 +81,22 @@ class Component(object):
                       self.rotation,
                       origin=(self.position.bounds[0], self.position.bounds[1]))
 
-    def reserve_nets(self, circuit):
+    def reserve_nets(self):
         ''' override me to associate pins with nets at creation time '''
         pass
+
+    def reserve_spi(self):
+        ''' override me to reserve spi pins.  This is a generic implementation
+            that may need to be adjusted for a given component '''
+        self.part['MISO'] += self.circuit.net('MISO')
+        self.part['MOSI'] += self.circuit.net('MOSI')
+        self.part['SCK'] += self.circuit.net('SCK')
+
+    def reserve_i2c(self):
+        ''' override me to reserve i2c pins.  This is a generic implementation
+            that may need to be adjusted for a given component '''
+        self.part['SCL'] += self.circuit.net('SCL')
+        self.part['SDA'] += self.circuit.net('SDA')
 
     def pad(self, name):
         ''' Returns the coordinates of the named pad.
@@ -185,22 +199,26 @@ class Component(object):
 
 
 class Feather(Component):
-    def reserve_nets(self, circuit):
-        self.part['GND'] += circuit.net('GND')
-        self.part['\+3V3'] += circuit.net('3V3')
-        self.part[27] += circuit.net('SCL')
-        self.part[28] += circuit.net('SDA')
+    def reserve_nets(self):
+        self.part['GND'] += self.circuit.net('GND')
+        self.part['\+3V3'] += self.circuit.net('3V3')
 
         for p in ['VBAT', 'EN', 'RST', 'AREF', 'VBUS']:
             self.part[p] += skidl.builtins.NC
 
+    def reserve_i2c(self):
+        self.part[27] += self.circuit.net('SCL')
+        self.part[28] += self.circuit.net('SDA')
+
 
 class Teensy(Component):
-    def reserve_nets(self, circuit):
+    def reserve_nets(self):
         #self.part['GND'] += circuit.net('GND')
-        self.part['3.3V_max100m'] += circuit.net('3V3')
-        self.part['18_A4_SDA0_Touch'] += circuit.net('SDA')
-        self.part['19_A5_SCL0_Touch'] += circuit.net('SCL')
+        self.part['3.3V_max100m'] += self.circuit.net('3V3')
 
         for p in ['Program', 'GND', 'VUSB', 'Vin', 'AREF']:
             self.part[p] += skidl.builtins.NC
+
+    def reserve_i2c(self):
+        self.part['18_A4_SDA0_Touch'] += self.circuit.net('SDA')
+        self.part['19_A5_SCL0_Touch'] += self.circuit.net('SCL')

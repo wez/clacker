@@ -6,15 +6,19 @@ from __future__ import print_function
 from tqdm import tqdm
 import logging
 
+
 class SuppressSkidlWarning(logging.Filter):
     ''' suppress this warning; we take care of this for ourselves
         after we've imported skidl '''
+
     def filter(self, record):
         return not record.getMessage().startswith(
-                'KISYSMOD environment variable is missing')
+            'KISYSMOD environment variable is missing')
+
 
 def fixup_skidl_logging_pre():
     logging.getLogger().addFilter(SuppressSkidlWarning())
+
 
 fixup_skidl_logging_pre()
 
@@ -30,6 +34,7 @@ def fixup_skidl_logging_post():
         We have to monkey patch this into the ERC setup because
         skidl unconditionally adds handlers each time it is run. '''
     orig_setup = skidl.Circuit._erc_setup
+
     def replace_handlers(logger):
         for h in logger.handlers:
             logger.removeHandler(h)
@@ -39,6 +44,7 @@ def fixup_skidl_logging_post():
         replace_handlers(logging.getLogger('ERC_Logger'))
 
     skidl.Circuit._erc_setup = monkey_patched_erc_setup
+
 
 fixup_skidl_logging_post()
 
@@ -93,8 +99,8 @@ class Circuit(object):
             ref = 'X%d' % self._next_ref
             self._next_ref += 1
 
-        component = cls(part, footprint, module, ref=ref)
-        component.reserve_nets(self)
+        component = cls(part, footprint, module, self, ref=ref)
+        component.reserve_nets()
         self._parts.append(component)
 
         return component
