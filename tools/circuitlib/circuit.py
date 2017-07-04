@@ -23,6 +23,25 @@ from . import kicadpcb
 import skidl
 import collections
 
+
+def fixup_skidl_logging_post():
+    ''' Remove the ERC logging handler, because it doubles up the
+        output and that makes things harder to read.
+        We have to monkey patch this into the ERC setup because
+        skidl unconditionally adds handlers each time it is run. '''
+    orig_setup = skidl.Circuit._erc_setup
+    def replace_handlers(logger):
+        for h in logger.handlers:
+            logger.removeHandler(h)
+
+    def monkey_patched_erc_setup(circuit):
+        orig_setup(circuit)
+        replace_handlers(logging.getLogger('ERC_Logger'))
+
+    skidl.Circuit._erc_setup = monkey_patched_erc_setup
+
+fixup_skidl_logging_post()
+
 skidl.lib_search_paths[skidl.KICAD] += [
     'kicad/symbols',
     '/Library/Application Support/kicad/library',
