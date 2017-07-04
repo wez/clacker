@@ -162,10 +162,10 @@ class Circuit(object):
         # do a second batch of these later
         self._defer_pins = []
 
-    def diode(self):
+    def diode(self, surface_mount=False):
         return self.part('device',
                          'D',
-                         'Diodes_THT:D_DO-41_SOD81_P7.62mm_Horizontal')
+                         'clacker:D_axial' if not surface_mount else 'clacker:D_SOD123')
 
     def feather(self):
         return self.part('MiscellaneousDevices',

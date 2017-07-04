@@ -64,6 +64,8 @@ class Pcb(targets.Target):
         col_nets = [circuit.net('col%d' % n) for n in range(0, num_cols)]
         row_nets = [circuit.net('row%d' % n) for n in range(0, num_rows)]
 
+        surface_mount = True
+
         for y, x, k in tqdm(list(matrix.keys()), desc='key schematic', unit='keys'):
             ident = k.identifier
 
@@ -82,16 +84,17 @@ class Pcb(targets.Target):
 
             diode_pos = translate(phys,
                                   yoff=-(SWITCH_SPACING / 2) + 1,
-                                  xoff=(SWITCH_SPACING / 2) - 1
+                                  xoff=(SWITCH_SPACING / 2) - 5
                                   )
+
             diode_pos = rotate(diode_pos, k.rotation_angle, phys)
 
-            cdiode = circuit.diode()
+            cdiode = circuit.diode(surface_mount=surface_mount)
             cdiode.set_ident('D' + ident)
             cdiode.set_position(cxlate(diode_pos))
             cdiode.set_rotation(180 + k.rotation_angle)
-            csw.part['2'] += cdiode.part['2']  # cathode
-            cdiode.part['1'] += row_nets[y]   # anode
+            csw.part['2'] += cdiode.part['2']  # anode
+            cdiode.part['1'] += row_nets[y]    # cathode -> row
 
         for y in range(0, num_rows):
             circuit.defer_pin_assignment(row_nets[y], cmcu)

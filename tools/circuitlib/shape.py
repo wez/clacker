@@ -50,7 +50,7 @@ def find_corners(shape):
     return corners
 
 
-def make_shapes(layout):
+def make_shapes(layout, use_rj45=False):
     # First pass to compute some shapes
     cap_holes = []
     for _, cluster in layout.key_clusters().items():
@@ -103,11 +103,20 @@ def make_shapes(layout):
         overall_hull, cap_holes, box(0, 0, 23, 51)), 0, 0)
     mcu = translate(mcu, 5, 0)  # make some space for easier routing
     # Adjust the hull to fit the mcu
-    overall_hull = unary_union([overall_hull, mcu]).convex_hull
+    overall_hull = unary_union([overall_hull,
+                                mcu.buffer(1,
+                                           cap_style=CAP_STYLE.square,
+                                           join_style=JOIN_STYLE.mitre)]).convex_hull
 
-    rj45 = find_space(overall_hull, unary_union(
-        [cap_holes, mcu]), box(0, 0, 18, 18))
-    overall_hull = unary_union([overall_hull, rj45]).convex_hull
+    if use_rj45:
+        rj45 = find_space(overall_hull, unary_union(
+            [cap_holes, mcu]), box(0, 0, 18, 18))
+        overall_hull = unary_union([overall_hull,
+                                    rj45.buffer(1,
+                                                cap_style=CAP_STYLE.square,
+                                                join_style=JOIN_STYLE.mitre)]).convex_hull
+    else:
+        rj45 = None
 
     # Locate screw holes at the corners.  We inflate the hull to allow room for
     # mounting material.  We do half of this now so we can locate the screw
@@ -133,8 +142,9 @@ def make_shapes(layout):
     bottom_plate = overall_hull
 
     # Ensure that sockets are flush with the edge
-    mcu = translate(mcu, 0, -(CASE_HOLE_SIZE + HOLE_PADDING))
-    rj45 = translate(rj45, 0, -(CASE_HOLE_SIZE + HOLE_PADDING))
+    mcu = translate(mcu, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
+    if rj45:
+        rj45 = translate(rj45, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
 
     top_plate = bottom_plate.symmetric_difference(cap_holes)
     top_plate = top_plate.symmetric_difference(corner_holes)
