@@ -11,6 +11,7 @@ from .kle import Key
 from .tsp import greedy_tsp
 import itertools
 from .utils import pairwise
+import os
 
 
 class SparseList(list):
@@ -258,7 +259,7 @@ class KeyboardMatrix(object):
                 yield x, y
 
 
-def min_matrix(layout):
+def min_matrix(layout, outputs):
     keys = list(layout.keys())
     k = int(math.ceil(math.sqrt(len(keys))))
     arr = []
@@ -340,12 +341,12 @@ def min_matrix(layout):
         for idx, keys in enumerate(columns):
             render_keys_and_path(keys, doc, colors[idx % len(colors)])
 
-        doc.save('/tmp/matrix.svg')
+        doc.save(os.path.join(outputs, 'matrix.svg'))
 
     return columns
 
 
-def compute_matrix(layout):
+def compute_matrix(layout, outputs):
     ''' Compute the logical keyboard matrix.
         This corresponds to the KEYMAP that we'd emit for the QMK firmware code.
         This matrix is square; we ignore rotation and use the approximate x,y
@@ -382,7 +383,7 @@ def compute_matrix(layout):
     print('Logical keyboard matrix: %d x %d\n' % (logical_cols, logical_rows))
     matrix.render()
 
-    clusters = min_matrix(layout)
+    clusters = min_matrix(layout, outputs)
     phys = KeyboardMatrix()
     for x, keys in enumerate(clusters):
         for y, key in enumerate(keys):

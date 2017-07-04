@@ -42,7 +42,8 @@ class Pcb(targets.Target):
         self.case_top(shapes, outputs)
         self.switch_plate(shapes, outputs)
 
-        logical_matrix, physical_matrix = matrix.compute_matrix(layout)
+        logical_matrix, physical_matrix = matrix.compute_matrix(
+            layout, outputs)
         self.gen_schematic(layout, shapes, outputs, physical_matrix)
 
     def gen_schematic(self, layout, shapes, outputs, matrix):
