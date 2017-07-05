@@ -56,6 +56,9 @@ class SVG(object):
         for shape, kwargs in self._shapes:
             shape = translate(shape, xoff=tx, yoff=ty)
 
+            if shape.geom_type == 'Point':
+                shape = shape.buffer(0.125)
+
             if shape.geom_type == 'Polygon':
                 if len(shape.interiors):
                     # if we have interiors we have to render the shape

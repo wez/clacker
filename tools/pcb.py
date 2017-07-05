@@ -21,6 +21,7 @@ import skidl
 from tqdm import tqdm
 
 from .kle import SWITCH_SPACING
+from .circuitlib.router import router
 
 
 class Pcb(targets.Target):
@@ -44,7 +45,33 @@ class Pcb(targets.Target):
 
         logical_matrix, physical_matrix = matrix.compute_matrix(
             layout, outputs)
-        self.gen_schematic(layout, shapes, outputs, physical_matrix)
+        circuit = self.gen_schematic(layout, shapes, outputs, physical_matrix)
+        self.route(circuit, outputs)
+
+    def route(self, circuit, outputs):
+        data = circuit.computeRoutingData()
+        g = router.route(data)
+
+        doc = circuit.toSVG()
+
+        done = set()
+        for a, b in g.edges():
+            def draw(a):
+                if a not in done:
+                    doc.add(a.shape,
+                            stroke='red',
+                            stroke_width=0.2,
+                            fill_opacity=0.4,
+                            fill='red')
+                    done.add(a)
+            draw(a)
+            draw(b)
+            cost = g[a][b]['weight']
+            doc.add(LineString([a.shape.centroid, b.shape.centroid]).buffer(0.125),
+                    stroke='skyblue' if cost < router.COLLISION_COST else 'pink',
+                    stroke_width=0.2)
+
+        doc.save(os.path.join(outputs, 'circuit.svg'))
 
     def gen_schematic(self, layout, shapes, outputs, matrix):
         def cxlate(shape):
@@ -132,8 +159,8 @@ class Pcb(targets.Target):
         # circuit.assign_pins()
 
         # Any remaining pins on the mcu are intentionally left unconnected
-        skidl.builtins.NC += cmcu.available_pins()
-        #skidl.builtins.NC += cteensy.available_pins()
+        circuit.circuit.NC += cmcu.available_pins()
+        # circuit.circuit.NC += cteensy.available_pins()
         circuit.finalize()
 
         circuit.save(os.path.join(outputs, self.name))

@@ -6,6 +6,9 @@ from __future__ import print_function
 from tqdm import tqdm
 import logging
 
+from shapely.geometry import (Point, Polygon, MultiPolygon, CAP_STYLE,
+                              JOIN_STYLE, box, LineString, MultiLineString, MultiPoint)
+
 
 class SuppressSkidlWarning(logging.Filter):
     ''' suppress this warning; we take care of this for ourselves
@@ -24,8 +27,14 @@ fixup_skidl_logging_pre()
 
 from . import component
 from . import kicadpcb
+from .router import spatialmap
+from .router import types
+from .. import svg
+
 import skidl
 import collections
+import networkx
+import itertools
 
 
 def fixup_skidl_logging_post():
@@ -66,7 +75,7 @@ class Circuit(object):
     def __init__(self):
 
         self.pcb = kicadpcb.Pcb()
-        skidl.builtins.default_circuit.reset()
+        self.circuit = skidl.Circuit()
 
         # The list of parts that comprise this circuit
         self._parts = []
@@ -83,14 +92,17 @@ class Circuit(object):
         ''' define or return a well-known net '''
         if name in self._nets:
             return self._nets[name]
-        net = skidl.Net(name)
+        net = skidl.Net(name, circuit=self.circuit)
         net.drive = drive
         self._nets[name] = net
         return net
 
     def part(self, device, value, footprint, cls=component.Component, ref=None):
         if device:
-            part = skidl.Part(device, value, footprint=footprint)
+            part = skidl.Part(device,
+                              value,
+                              footprint=footprint,
+                              circuit=self.circuit)
         else:
             part = None
         module = self.pcb.parseFootprintModule(footprint)
@@ -207,8 +219,8 @@ class Circuit(object):
             all of the nets have been connected.
             This walks through the model and populates a fresh
             instance of the pcbnew board model '''
-        for net in skidl.builtins.default_circuit._get_nets():
-            if net == skidl.builtins.NC:
+        for net in self.circuit._get_nets():
+            if net == self.circuit.NC:
                 continue
             self.pcb.net(net.name)
 
@@ -217,20 +229,80 @@ class Circuit(object):
 
     def finalize(self):
         self.assign_pins()
-        skidl.ERC()
-        tqdm.write('Removing redundant pads')
+        self.circuit.ERC()
+        # tqdm.write('Removing redundant pads')
         for part in self._parts:
             part.add_to_pcb(self.pcb)
-            part.remove_nc_pads()
+            # part.remove_nc_pads()
 
-    def computeNets(self):
-        ''' Returns a list of Net instances corresponding to
-            the nets in the circuit. '''
+    def computeRoutingData(self):
+        to_route = networkx.Graph()
 
-        nets = []
-        for net in skidl.SubCircuit._get_nets():
-            if net == skidl.builtins.NC:
+        # Turn each net into the set of TwoNets that we'll need to route.
+        # We compute the minimum spanning tree of each net, then take
+        # each pair of edges; those are the TwoNets
+        two_nets = []
+        for net in self.circuit._get_nets():
+            if net == self.circuit.NC:
                 continue
-            nets.append(Net(net))
+            g = networkx.Graph()
+            for pin in net._get_pins():
+                pad = pin.component.find_pad(pin)
+                if pad.type == 'thru_hole':
+                    t = types.ThruHole(pin)
+                else:
+                    t = types.SmdPad(pin)
+                g.add_node(t)
+                to_route.add_node(t)
 
-        return nets
+            for a, b in itertools.combinations(g.nodes(), r=2):
+                g.add_edge(a, b, weight=a.shape.centroid.distance(
+                    b.shape.centroid))
+
+            mst = networkx.minimum_spanning_tree(g)
+            for a, b in mst.edges():
+                to_route.add_edge(a, b)
+                two_nets.append((a, b))
+
+        smap = spatialmap.SpatialMap()
+        for part in self._parts:
+            for idx, pad in enumerate(part.module.pads):
+                if not part.find_pad_by_name(pad.name):
+                    # was elided
+                    continue
+                smap.add(part.pad(idx), pad)
+
+        return {
+            'graph': to_route,
+            '2nets': two_nets,
+            'smap': smap,
+        }
+
+    def toSVG(self):
+        doc = svg.SVG()
+
+        for comp in self._parts:
+            for idx, pad in enumerate(comp.module.pads):
+                if not comp.find_pad_by_name(pad.name):
+                    # was elided
+                    continue
+
+                doc.add(comp.pad(idx),
+                        stroke='orange' if pad.type == 'thru_hole' else 'green',
+                        stroke_width=0.1,
+                        fill='gold',
+                        fill_opacity=0.2)
+            for line in comp.module.lines:
+                adjusted = map(comp.transform, map(
+                    Point, [line.start, line.end]))
+                doc.add(LineString(adjusted),
+                        stroke='gray',
+                        stroke_width=line.width)
+            for circ in comp.module.circles:
+                adjusted = comp.transform(Point(circ.center))
+                doc.add(adjusted.buffer(circ.width / 2),
+                        stroke='gray',
+                        stroke_width=0.1,
+                        fill_opacity=0)
+
+        return doc

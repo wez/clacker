@@ -49,7 +49,7 @@ class Component(object):
                 # apply its individual rotation
                 padshape = rotate(padshape, 360 - pos[2], origin=pos[0:2])
 
-            padname = str(padidx if pad.name in self._pads else pad.name)
+            padname = padidx if pad.name in self._pads else pad.name
             self._pads[padname] = padshape
             if self.part:
                 # stitch the pad and the pin together
@@ -140,7 +140,7 @@ class Component(object):
                 continue
 
             for n in pin.nets:
-                if n == skidl.builtins.NC:
+                if n == n.circuit.NC:
                     remove.append(pad)
                     break
 
@@ -169,7 +169,7 @@ class Component(object):
                     print('Multiple nets on %s\n%s' % (self.part, pin))
                     continue
                 for n in pin.nets:
-                    if n == skidl.builtins.NC:
+                    if n == n.circuit.NC:
                         continue
                     pad = self.find_pad(pin)
                     if not pad:
@@ -204,7 +204,7 @@ class Feather(Component):
         self.part['\+3V3'] += self.circuit.net('3V3')
 
         for p in ['VBAT', 'EN', 'RST', 'AREF', 'VBUS']:
-            self.part[p] += skidl.builtins.NC
+            self.part[p] += self.circuit.circuit.NC
 
     def reserve_i2c(self):
         self.part[27] += self.circuit.net('SCL')
@@ -217,7 +217,7 @@ class Teensy(Component):
         self.part['3.3V_max100m'] += self.circuit.net('3V3')
 
         for p in ['Program', 'GND', 'VUSB', 'Vin', 'AREF']:
-            self.part[p] += skidl.builtins.NC
+            self.part[p] += self.circuit.circuit.NC
 
     def reserve_i2c(self):
         self.part['18_A4_SDA0_Touch'] += self.circuit.net('SDA')
