@@ -32,6 +32,7 @@ if not munge_path():
 
 
 from tools import (
+    case,
     infofile,
     firmware,
     pcb,
@@ -42,32 +43,46 @@ from tools import (
 )
 
 
+def _list_targets(cls):
+    return [f for f in targets.Targets.values() if isinstance(f, cls)]
+
+
 def list_firmware():
-    return [f for f in targets.Targets.values() if isinstance(f, firmware.Firmware)]
+    return _list_targets(firmware.Firmware)
 
 
 def list_tests():
-    return [f for f in targets.Targets.values() if isinstance(f, test.UnitTest)]
+    return _list_targets(test.UnitTest)
 
 
 def list_pcbs():
-    return [f for f in targets.Targets.values() if isinstance(f, pcb.Pcb)]
+    return _list_targets(pcb.Pcb)
 
 
-def do_build(args):
-    if args.firmware:
-        to_build = [targets.Targets.get(name) for name in args.firmware]
+def list_cases():
+    return _list_targets(case.Case)
+
+
+def _do_build(label, cls, args, argattr):
+    if getattr(args, argattr):
+        to_build = [targets.Targets.get(name)
+                    for name in getattr(args, argattr)]
 
         for f in to_build:
-            if not isinstance(f, firmware.Firmware):
-                sys.stderr.write('%s is not a firmware target\n' % f.full_name)
+            if not isinstance(f, cls):
+                sys.stderr.write('%s is not a %s target\n' %
+                                 (f.full_name, label))
                 sys.exit(1)
 
     else:
-        to_build = list_firmware()
+        to_build = _list_targets(cls)
 
     for f in to_build:
         f.build()
+
+
+def do_build(args):
+    return _do_build('firmware', firmware.Firmware, args, 'firmware')
 
 
 def do_upload(args):
@@ -80,19 +95,11 @@ def do_upload(args):
 
 
 def do_genpcb(args):
-    if args.pcb:
-        to_build = [targets.Targets.get(name) for name in args.pcb]
+    return _do_build('pcb', pcb.Pcb, args, 'pcb')
 
-        for f in to_build:
-            if not isinstance(f, pcb.Pcb):
-                sys.stderr.write('%s is not a pcb target\n' % f.full_name)
-                sys.exit(1)
 
-    else:
-        to_build = list_pcbs()
-
-    for f in to_build:
-        f.build()
+def do_gencase(args):
+    return _do_build('case', case.Case, args, 'case')
 
 
 def do_tidy(args):
@@ -223,6 +230,18 @@ genpcb_parser = subparsers.add_parser('gen-pcb', help='Generate PCB',
 genpcb_parser.add_argument(
     'pcb', help='which pcb to generate', nargs='*')
 genpcb_parser.set_defaults(func=do_genpcb)
+
+
+gencase_parser = subparsers.add_parser('gen-case', help='Generate case',
+                                       description='''
+    Generate a case from a keyboard layout.
+    If no case is specified, generates all of them.
+    You may run `clacker.py list-case` to see a list of
+    case projects that can be passed to the build command.
+    ''')
+gencase_parser.add_argument(
+    'case', help='which case to generate', nargs='*')
+gencase_parser.set_defaults(func=do_gencase)
 
 args = parser.parse_args()
 if hasattr(args, 'func'):

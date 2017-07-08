@@ -6,4 +6,5 @@
 
 left = KeyLayout('left-keymap.json')
 
-Pcb(name='left', layout=left)
+Pcb(name='left-pcb', layout=left)
+Case(name='left-case', layout=left)

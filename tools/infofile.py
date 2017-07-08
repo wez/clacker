@@ -5,6 +5,7 @@ import string
 
 from . import (
     board,
+    case,
     firmware,
     keymatrix,
     library,
@@ -39,5 +40,6 @@ def load_info_file(filename):
         export(board, g)
         export(test, g)
         export(pcb, g)
+        export(case, g)
 
         eval(code, g)
