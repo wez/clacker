@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from scipy import spatial
+from pprint import pprint
 
 KDTree = spatial.cKDTree if hasattr(spatial, 'cKDTree') else spatial.KDTree
 
@@ -11,7 +12,14 @@ def vertices(shape):
     if shape.geom_type == 'LineString':
         return [(x, y) for x, y in shape.coords]
     if shape.geom_type == 'Point':
-        return [(shape.bounds[0], shape.bounds[1])]
+        if not shape.is_empty:
+            return [(shape.bounds[0], shape.bounds[1])]
+        return []
+    if shape.geom_type in ('MultiPolygon', 'GeometryCollection'):
+        v = []
+        for geom in shape:
+            v += vertices(geom)
+        return v
     raise Exception('geom_type %s %r' % (shape.geom_type, shape.wkt))
 
 
@@ -25,7 +33,7 @@ class Entry(object):
 
 class SpatialMap(object):
     ''' Provides means for mapping locations to objects '''
-    USE_TREE = False
+    USE_TREE = True
 
     def __init__(self):
         self._map = {}
@@ -91,6 +99,8 @@ class SpatialMap(object):
         return self._entries
 
     def _filter(self, shape, fn):
+        if shape.is_empty:
+            return
         bounds = shape.bounds
         centroid = shape.centroid
         width = bounds[2] - bounds[0]

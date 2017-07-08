@@ -23,6 +23,23 @@ from tqdm import tqdm
 from .kle import SWITCH_SPACING
 from .circuitlib.router import router
 
+PONOKO_LASER_CUT = {
+    'fill': 'none',
+    'stroke_width': '0.01mm',
+    'stroke': '#0000ff',
+}
+
+PONOKO_LASER_ENGRAVE = {
+    'fill': 'none',
+    'stroke_width': '0.01mm',
+    'stroke': '#ff0000',
+}
+
+PONOKO_LASER_ENGRAVE_AREA = {
+    'fill': '#000000',
+    'stroke': 'none',
+}
+
 
 class Pcb(targets.Target):
     def __init__(self, name, layout):
@@ -46,14 +63,19 @@ class Pcb(targets.Target):
         logical_matrix, physical_matrix = matrix.compute_matrix(
             layout, outputs)
         circuit = self.gen_schematic(layout, shapes, outputs, physical_matrix)
-        self.route(circuit, outputs)
+        #self.route(circuit, outputs)
 
     def route(self, circuit, outputs):
         data = circuit.computeRoutingData()
+        # g = data['graph'] # router.route(data)
         g = router.route(data)
 
         doc = circuit.toSVG()
 
+        colors = {
+            'F.Cu': ['green', 'magenta'],
+            'B.Cu': ['grey',  'red']
+        }
         done = set()
         for a, b in g.edges():
             def draw(a):
@@ -66,10 +88,21 @@ class Pcb(targets.Target):
                     done.add(a)
             draw(a)
             draw(b)
-            cost = g[a][b]['weight']
+            collision = g[a][b].get('collision', False)
+            layer = g[a][b].get('layer') or 'B.Cu'
+            color = colors[layer]
+            color = color[1] if collision else color[0]
+
             doc.add(LineString([a.shape.centroid, b.shape.centroid]).buffer(0.125),
-                    stroke='skyblue' if cost < router.COLLISION_COST else 'pink',
-                    stroke_width=0.2)
+                    fill=color,
+                    fill_opacity=0.4,
+                    stroke=color,
+                    stroke_width=0.1)
+
+        for ent in data['smap']._entries:
+            doc.add(ent.shape.buffer(2),
+                    fill='skyblue',
+                    fill_opacity=0.2)
 
         doc.save(os.path.join(outputs, 'circuit.svg'))
 
@@ -181,10 +214,7 @@ class Pcb(targets.Target):
         doc = svg.SVG()
 
         doc.add(shapes['bottom_plate'].symmetric_difference(shapes['corner_holes']),
-                stroke='blue',
-                fill_opacity=0.1,
-                fill='skyblue',
-                stroke_width=0.1)
+                **PONOKO_LASER_CUT)
 
         doc.save(os.path.join(outputs, 'case-bottom.svg'))
 
@@ -192,10 +222,7 @@ class Pcb(targets.Target):
         doc = svg.SVG()
 
         doc.add(shapes['top_plate'],
-                stroke='black',
-                fill_opacity=0.1,
-                fill='black',
-                stroke_width=0.1)
+                **PONOKO_LASER_CUT)
 
         doc.save(os.path.join(outputs, 'case-top.svg'))
 
@@ -203,10 +230,7 @@ class Pcb(targets.Target):
         doc = svg.SVG()
 
         doc.add(shapes['switch_plate'],
-                stroke='black',
-                fill_opacity=0.1,
-                fill='black',
-                stroke_width=0.1)
+                **PONOKO_LASER_CUT)
 
         doc.save(os.path.join(outputs, 'switch-plate-minimal.svg'))
 
@@ -215,9 +239,6 @@ class Pcb(targets.Target):
         doc.add(shapes['bottom_plate'].symmetric_difference(
             shapes['switch_holes']).symmetric_difference(
             shapes['corner_holes']),
-            stroke='black',
-            fill_opacity=0.1,
-            fill='black',
-            stroke_width=0.1)
+            **PONOKO_LASER_CUT)
 
         doc.save(os.path.join(outputs, 'switch-plate-full.svg'))

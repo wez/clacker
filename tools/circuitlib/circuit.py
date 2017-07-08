@@ -242,6 +242,8 @@ class Circuit(object):
         # We compute the minimum spanning tree of each net, then take
         # each pair of edges; those are the TwoNets
         two_nets = []
+        pad_to_node = {}
+        smap = spatialmap.SpatialMap()
         for net in self.circuit._get_nets():
             if net == self.circuit.NC:
                 continue
@@ -251,9 +253,11 @@ class Circuit(object):
                 if pad.type == 'thru_hole':
                     t = types.ThruHole(pin)
                 else:
-                    t = types.SmdPad(pin)
+                    t = types.SmdPad(pin, pad)
                 g.add_node(t)
                 to_route.add_node(t)
+                pad_to_node[t.shape.wkt] = t
+                smap.add(t.shape, t)
 
             for a, b in itertools.combinations(g.nodes(), r=2):
                 g.add_edge(a, b, weight=a.shape.centroid.distance(
@@ -264,13 +268,17 @@ class Circuit(object):
                 to_route.add_edge(a, b)
                 two_nets.append((a, b))
 
-        smap = spatialmap.SpatialMap()
         for part in self._parts:
-            for idx, pad in enumerate(part.module.pads):
+            for pad, shape in part._pads_by_idx.values():
                 if not part.find_pad_by_name(pad.name):
-                    # was elided
+                    # Was elided
                     continue
-                smap.add(part.pad(idx), pad)
+                shape = part.transform(shape)
+                node = pad_to_node.get(shape.wkt)
+                if node:
+                    smap.add(node.shape, node)
+                else:
+                    smap.add(shape, types.Obstacle(shape, pad))
 
         return {
             'graph': to_route,

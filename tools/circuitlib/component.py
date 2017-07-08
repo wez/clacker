@@ -30,6 +30,7 @@ class Component(object):
         # Collect a map of pads from the footprint object; these are
         # the pins of the device, but with the physical coords
         self._pads = {}
+        self._pads_by_idx = {}
         for padidx, pad in enumerate(self.module.pads):
             pos = pad.at
             size = pad.size
@@ -51,6 +52,7 @@ class Component(object):
 
             padname = padidx if pad.name in self._pads else pad.name
             self._pads[padname] = padshape
+            self._pads_by_idx[padidx] = (pad, padshape)
             if self.part:
                 # stitch the pad and the pin together
                 try:
