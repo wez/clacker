@@ -12,6 +12,7 @@ from .tsp import greedy_tsp
 import itertools
 from .utils import pairwise
 import os
+from pprint import pprint
 
 
 class SparseList(list):
@@ -259,7 +260,42 @@ class KeyboardMatrix(object):
                 yield x, y
 
 
-def min_matrix(layout, outputs):
+def min_matrix_simple_fit(layout, matrix, k):
+    columns = []
+    spilled_keys = []
+    free_positions = []
+    num_cols, num_rows = matrix.dimensions()
+    for x in range(0, num_cols):
+        col = []
+        for y in range(0, num_rows):
+            key = matrix.key(x, y)
+            if key:
+                if len(col) < k:
+                    col.append(key)
+                else:
+                    # No room in this column; remember the key for later
+                    spilled_keys.append(key)
+
+        l = len(col)
+        while l < k:
+            # We just need to remember that this column has room;
+            # we'll simply append to it later.
+            free_positions.append(x)
+            l += 1
+
+        columns.append(col)
+
+    while spilled_keys:
+        # For each for the spilled keys, find a column with room
+        # and append the key to it
+        x = free_positions.pop()
+        key = spilled_keys.pop()
+        columns[x].append(key)
+
+    return columns
+
+
+def min_matrix_kmeans(layout, k):
     keys = list(layout.keys())
     k = int(math.ceil(math.sqrt(len(keys))))
     arr = []
@@ -312,38 +348,21 @@ def min_matrix(layout, outputs):
     columns = sorted(
         columns, key=lambda cluster: origin.distance(cluster[0].polygon()))
 
-    if True:
-        doc = SVG()
-
-        def render_keys_and_path(keys, doc, color):
-            for key in keys:
-                doc.add(key.polygon(),
-                        stroke=color,
-                        stroke_width=0.2,
-                        fill=color,
-                        fill_opacity=0.4
-                        )
-            for k1, k2 in pairwise(keys):
-                doc.add(LineString([k1.centroid(), k2.centroid()]),
-                        stroke=color,
-                        stroke_width=0.2
-                        )
-
-        colors = [
-            'red',
-            'blue',
-            'green',
-            'gray',
-            'gold',
-            'purple'
-        ]
-
-        for idx, keys in enumerate(columns):
-            render_keys_and_path(keys, doc, colors[idx % len(colors)])
-
-        doc.save(os.path.join(outputs, 'matrix.svg'))
-
     return columns
+
+
+def min_matrix(layout, matrix):
+    keys = list(layout.keys())
+    k = int(math.ceil(math.sqrt(len(keys))))
+
+    cols, rows = matrix.dimensions()
+    if cols == k:
+        # It's a square matrix, so use simple fit
+        return min_matrix_simple_fit(layout, matrix, k)
+
+    # Use more complex clustering fit.  This generates a matrix that has
+    # more crossings than the simple fit
+    return min_matrix_kmeans(layout, k)
 
 
 def compute_matrix(layout, outputs):
@@ -383,14 +402,45 @@ def compute_matrix(layout, outputs):
     print('Logical keyboard matrix: %d x %d\n' % (logical_cols, logical_rows))
     matrix.render()
 
-    clusters = min_matrix(layout, outputs)
+    columns = min_matrix(layout, matrix)
     phys = KeyboardMatrix()
-    for x, keys in enumerate(clusters):
+    for x, keys in enumerate(columns):
         for y, key in enumerate(keys):
             phys.addKey(x, y, key)
 
     cols, rows = phys.dimensions()
     print('Physical matrix %d x %d' % (cols, rows))
     phys.render()
+
+    if True:
+        doc = SVG()
+
+        def render_keys_and_path(keys, doc, color):
+            for key in keys:
+                doc.add(key.polygon(),
+                        stroke=color,
+                        stroke_width=0.2,
+                        fill=color,
+                        fill_opacity=0.4
+                        )
+            for k1, k2 in pairwise(keys):
+                doc.add(LineString([k1.centroid(), k2.centroid()]),
+                        stroke=color,
+                        stroke_width=0.2
+                        )
+
+        colors = [
+            'red',
+            'blue',
+            'green',
+            'gray',
+            'gold',
+            'purple'
+        ]
+
+        for idx, keys in enumerate(columns):
+            render_keys_and_path(keys, doc, colors[idx % len(colors)])
+
+        doc.save(os.path.join(outputs, 'matrix.svg'))
 
     return matrix, phys

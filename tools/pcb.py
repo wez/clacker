@@ -63,7 +63,7 @@ class Pcb(targets.Target):
         logical_matrix, physical_matrix = matrix.compute_matrix(
             layout, outputs)
         circuit = self.gen_schematic(layout, shapes, outputs, physical_matrix)
-        #self.route(circuit, outputs)
+        self.route(circuit, outputs)
 
     def route(self, circuit, outputs):
         data = circuit.computeRoutingData()
