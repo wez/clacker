@@ -486,7 +486,7 @@ def route(data):
     best_solution = solution
     tqdm.write('Initial solution has cost %r' % best_solution.cost)
 
-    improved = False
+    improved = True
     while improved:
         attempts = 5
         improved = False

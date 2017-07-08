@@ -5,3 +5,4 @@ shapely
 skidl
 svgwrite
 tqdm
+pymesh
