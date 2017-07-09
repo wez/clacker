@@ -59,8 +59,10 @@ def make_shapes(layout, use_rj45=False):
             key_poly = k.polygon()
 
             # Buffer the outline to increase the chances of having an
-            # intersection for keys that are very close to each other
-            hull.append(key_poly.buffer(0))
+            # intersection for keys that are very close to each other.
+            # Add a little extra room to minimize the chances that the
+            # keycaps will touch the case/plate edging.
+            hull.append(key_poly.buffer(2))
 
         # compute the outline of the keycaps; this is for the topmost plate
         hull = unary_union(MultiPolygon(hull))
