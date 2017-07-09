@@ -146,8 +146,8 @@ def make_shapes(layout, use_rj45=False):
     if rj45:
         rj45 = translate(rj45, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
 
-    top_plate = bottom_plate.symmetric_difference(cap_holes)
-    top_plate = top_plate.symmetric_difference(corner_holes)
+    top_plate_no_corner_holes = bottom_plate.symmetric_difference(cap_holes)
+    top_plate = top_plate_no_corner_holes.symmetric_difference(corner_holes)
 
     switch_holes = []
     for k in layout.keys():
@@ -158,6 +158,7 @@ def make_shapes(layout, use_rj45=False):
     return {
         'bounds': bounds,
         'top_plate': top_plate,
+        'top_plate_no_corner_holes': top_plate_no_corner_holes,
         'bottom_plate': bottom_plate,
         'corner_holes': corner_holes,
         'corner_points': corner_points,

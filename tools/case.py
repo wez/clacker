@@ -7,6 +7,7 @@ from . import filesystem
 from .circuitlib import shape
 from . import svg
 from . import matrix
+from . import openscad
 
 PONOKO_LASER_CUT = {
     'fill': 'none',
@@ -45,6 +46,7 @@ class Case(targets.Target):
         self.case_bottom(shapes, outputs)
         self.case_top(shapes, outputs)
         self.switch_plate(shapes, outputs)
+        self.case_top_3d(shapes, outputs)
 
     def case_bottom(self, shapes, outputs):
         doc = svg.SVG()
@@ -78,3 +80,13 @@ class Case(targets.Target):
             **PONOKO_LASER_CUT)
 
         doc.save(os.path.join(outputs, 'switch-plate-full.svg'))
+
+    def case_top_3d(self, shapes, outputs):
+        scad = openscad.Script()
+
+        plate = shapes['bottom_plate'].symmetric_difference(
+            shapes['switch_holes'])
+
+        scad.add(openscad.Shape(plate).linearExtrude(2).union(openscad.Shape(
+            shapes['top_plate_no_corner_holes']).linearExtrude(5).translate([0, 0, 2])))
+        scad.save(os.path.join(outputs, 'switch-plate.scad'))
