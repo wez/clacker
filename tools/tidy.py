@@ -11,6 +11,7 @@ ignore_dirs = [
     'src/testing/lest',
     'pydeps',
     'outputs/',
+    'pycircuit',
     'pykicad',
     'kicad-deps',
 ]
