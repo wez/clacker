@@ -11,7 +11,8 @@ import subprocess
 
 def munge_path():
     ''' Find our locally installed deps '''
-    sys.path.insert(1, os.path.join(os.path.dirname(__file__), 'pykicad'))
+    for sub in ['pykicad', 'pycircuit']:
+        sys.path.insert(1, os.path.join(os.path.dirname(__file__), sub))
     depdir = os.path.join(os.path.dirname(__file__), 'pydeps')
     for root, dirs, files in os.walk(depdir):
         if 'site-packages' in dirs:

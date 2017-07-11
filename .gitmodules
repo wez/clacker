@@ -2,3 +2,6 @@
 	path = pykicad
 	url = git@github.com:wez/pykicad.git
 	branch = line
+[submodule "pycircuit"]
+	path = pycircuit
+	url = https://github.com/dvc94ch/pycircuit.git
