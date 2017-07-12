@@ -481,7 +481,7 @@ class Solution(object):
                     self.add_edge(b, b_branch, layer=layer)
 
                 self.layer_smap = save_smap
-                self.split_edge(a_branch, b_branch, phys_only=True)
+                #self.split_edge(a_branch, b_branch, phys_only=True)
 
             self.add_edge(vert_a[0], vert_a[1], via=True)
             self.add_edge(vert_b[0], vert_b[1], via=True)
@@ -502,7 +502,6 @@ def compute_initial_2net_order(two_nets):
 
 
 def route(data):
-    return data['triangulation']
     two_nets = compute_initial_2net_order(data['2nets'])
     solution = Solution(data['smap'], networkx.Graph(), two_nets)
     solution.build_initial_graph()
@@ -528,7 +527,7 @@ def route(data):
                 best_solution = solution
                 break
 
-    return solution.g
+    # return solution.g
     # Transform the solution to a graph so that caller can render it
     solution = best_solution
     routed_graph = networkx.Graph()

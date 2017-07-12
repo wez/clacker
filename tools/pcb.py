@@ -21,7 +21,7 @@ import skidl
 from tqdm import tqdm
 
 from .kle import SWITCH_SPACING
-from .circuitlib.router import (router, types)
+from .circuitlib.router import (router, types, msteinertree)
 
 import pycircuit
 
@@ -45,7 +45,7 @@ class Pcb(targets.Target):
         logical_matrix, physical_matrix = matrix.compute_matrix(
             layout, outputs)
         circuit = self.gen_schematic(layout, shapes, outputs, physical_matrix)
-        #self.route(circuit, shapes, outputs)
+        self.route(circuit, shapes, outputs)
         #self.gen_pycircuit(layout, shapes, outputs, physical_matrix)
 
     def gen_pycircuit(self, layout, shapes, outputs, matrix):
@@ -126,9 +126,9 @@ class Pcb(targets.Target):
                     if shapes['bottom_plate'].intersects(p):
                         tri.add_node(types.Branch(cxlate(p), types.FRONT))
 
-        g = tri.triangulate()
+        #g = tri.triangulate()
         # g = data['graph'] # router.route(data)
-        #g = router.route(data)
+        g = router.route(data)
 
         doc = circuit.toSVG()
 

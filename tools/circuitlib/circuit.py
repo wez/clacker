@@ -31,6 +31,7 @@ from . import kicadpcb
 from .router import spatialmap
 from .router import types
 from .router import triangulation
+from .router import msteinertree
 from .. import svg
 
 import skidl
@@ -247,10 +248,14 @@ class Circuit(object):
         two_nets = []
         pad_to_node = {}
         smap = spatialmap.SpatialMap()
+
+        list_of_nets = []
+
         for net in self.circuit._get_nets():
             if net == self.circuit.NC:
                 continue
             g = networkx.Graph()
+            pins_in_net = []
             for pin in net._get_pins():
                 pad = pin.component.find_pad(pin)
                 if pad.type == 'thru_hole':
@@ -262,15 +267,25 @@ class Circuit(object):
                 pad_to_node[t.shape.wkt] = t
                 smap.add(t.shape, t)
                 tri.add_node(t)
+                pins_in_net.append(t)
 
-            for a, b in itertools.combinations(g.nodes(), r=2):
-                g.add_edge(a, b, weight=a.shape.centroid.distance(
-                    b.shape.centroid))
+            list_of_nets.append(pins_in_net)
 
-            mst = networkx.minimum_spanning_tree(g)
-            for a, b in mst.edges():
-                to_route.add_edge(a, b)
-                two_nets.append((a, b))
+            if False:
+                for a, b in itertools.combinations(g.nodes(), r=2):
+                    g.add_edge(a, b, weight=a.shape.centroid.distance(
+                        b.shape.centroid))
+
+                mst = networkx.minimum_spanning_tree(g)
+                for a, b in mst.edges():
+                    to_route.add_edge(a, b)
+                    two_nets.append((a, b))
+            else:
+                # Prefer the steiner variant of the MST because it generates
+                # a layout that is easier to route than the pure MST.
+                mst = msteinertree.rectilinear_steiner_minimum_spanning_tree(
+                    pins_in_net)
+                two_nets += mst
 
         for part in self._parts:
             for pad, shape in part._pads_by_idx.values():
@@ -291,6 +306,7 @@ class Circuit(object):
             '2nets': two_nets,
             'smap': smap,
             'triangulation': tri,
+            'list_of_nets': list_of_nets,
         }
 
     def toSVG(self):
