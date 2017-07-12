@@ -6,6 +6,7 @@ from __future__ import print_function
 from tqdm import tqdm
 import logging
 
+from scipy.spatial import Delaunay
 from shapely.geometry import (Point, Polygon, MultiPolygon, CAP_STYLE,
                               JOIN_STYLE, box, LineString, MultiLineString, MultiPoint)
 
@@ -29,6 +30,7 @@ from . import component
 from . import kicadpcb
 from .router import spatialmap
 from .router import types
+from .router import triangulation
 from .. import svg
 
 import skidl
@@ -238,6 +240,7 @@ class Circuit(object):
 
     def computeRoutingData(self):
         to_route = networkx.Graph()
+        tri = triangulation.Triangulation()
 
         # Turn each net into the set of TwoNets that we'll need to route.
         # We compute the minimum spanning tree of each net, then take
@@ -259,6 +262,7 @@ class Circuit(object):
                 to_route.add_node(t)
                 pad_to_node[t.shape.wkt] = t
                 smap.add(t.shape, t)
+                tri.add_node(t)
 
             for a, b in itertools.combinations(g.nodes(), r=2):
                 g.add_edge(a, b, weight=a.shape.centroid.distance(
@@ -279,12 +283,15 @@ class Circuit(object):
                 if node:
                     smap.add(node.shape, node)
                 else:
-                    smap.add(shape, types.Obstacle(pad.layer, shape, pad))
+                    obs = types.Obstacle(pad.layer, shape, pad)
+                    smap.add(shape, obs)
+                    tri.add_node(obs)
 
         return {
             'graph': to_route,
             '2nets': two_nets,
             'smap': smap,
+            'triangulation': tri,
         }
 
     def toSVG(self):

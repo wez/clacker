@@ -502,6 +502,7 @@ def compute_initial_2net_order(two_nets):
 
 
 def route(data):
+    return data['triangulation']
     two_nets = compute_initial_2net_order(data['2nets'])
     solution = Solution(data['smap'], networkx.Graph(), two_nets)
     solution.build_initial_graph()
@@ -509,7 +510,7 @@ def route(data):
     best_solution = solution
     tqdm.write('Initial solution has cost %r' % best_solution.cost)
 
-    improved = True
+    improved = False
     while improved:
         attempts = 6
         improved = False

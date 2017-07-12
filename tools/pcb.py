@@ -21,7 +21,7 @@ import skidl
 from tqdm import tqdm
 
 from .kle import SWITCH_SPACING
-from .circuitlib.router import router
+from .circuitlib.router import (router, types)
 
 import pycircuit
 
@@ -45,7 +45,7 @@ class Pcb(targets.Target):
         logical_matrix, physical_matrix = matrix.compute_matrix(
             layout, outputs)
         circuit = self.gen_schematic(layout, shapes, outputs, physical_matrix)
-        self.route(circuit, outputs)
+        self.route(circuit, shapes, outputs)
 
         #self.gen_pycircuit(layout, shapes, outputs, physical_matrix)
 
@@ -103,10 +103,32 @@ class Pcb(targets.Target):
             with filesystem.WriteFileIfChanged(os.path.join(outputs, 'alt.kicad_pcb')) as f:
                 f.write(str(kpcb))
 
-    def route(self, circuit, outputs):
+    def route(self, circuit, shapes, outputs):
         data = circuit.computeRoutingData()
+        tri = data['triangulation']
+
+        bounds = shapes['bottom_plate'].envelope
+
+        def cxlate(shape):
+            PCBNEW_SPACING = 25
+            return translate(shape,
+                             PCBNEW_SPACING - bounds.bounds[0],
+                             PCBNEW_SPACING - bounds.bounds[1])
+
+        tri.add_node(types.Obstacle(
+            'Edge.Cuts', cxlate(shapes['bottom_plate']), 'Edge'))
+        # Add some grid-snapped points
+        width = int(bounds.bounds[2])
+        height = int(bounds.bounds[3])
+        for x in range(0, width, 10):
+            for y in range(0, height, 10):
+                p = Point(x, y)
+                if shapes['bottom_plate'].intersects(p):
+                    tri.add_node(types.Branch(cxlate(p), types.FRONT))
+
+        g = tri.triangulate()
         # g = data['graph'] # router.route(data)
-        g = router.route(data)
+        #g = router.route(data)
 
         doc = circuit.toSVG()
 
@@ -118,11 +140,17 @@ class Pcb(targets.Target):
         for a, b in g.edges():
             def draw(a):
                 if a not in done:
-                    doc.add(a.shape,
-                            stroke='red',
-                            stroke_width=0.2,
-                            fill_opacity=0.4,
-                            fill='red')
+                    if isinstance(a, types.Obstacle) and isinstance(a.value, str) and a.value == 'Edge':
+                        doc.add(a.shape,
+                                stroke='green',
+                                fill_opacity=0,
+                                stroke_width=0.2)
+                    else:
+                        doc.add(a.shape,
+                                stroke='red',
+                                stroke_width=0.2,
+                                fill_opacity=0.4,
+                                fill='red')
                     done.add(a)
             draw(a)
             draw(b)
@@ -169,8 +197,6 @@ class Pcb(targets.Target):
         surface_mount = True
 
         for y, x, k in tqdm(list(matrix.keys()), desc='key schematic', unit='keys'):
-            if y != 1 or x > 1:
-                continue
             ident = k.identifier
 
             phys = k.centroid()
