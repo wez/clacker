@@ -6,3 +6,4 @@ skidl
 svgwrite
 tqdm
 graphviz
+geompreds

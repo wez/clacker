@@ -117,14 +117,15 @@ class Pcb(targets.Target):
 
         tri.add_node(types.Obstacle(
             'Edge.Cuts', cxlate(shapes['bottom_plate']), 'Edge'))
-        # Add some grid-snapped points
-        width = int(bounds.bounds[2])
-        height = int(bounds.bounds[3])
-        for x in range(0, width, 10):
-            for y in range(0, height, 10):
-                p = Point(x, y)
-                if shapes['bottom_plate'].intersects(p):
-                    tri.add_node(types.Branch(cxlate(p), types.FRONT))
+        if False:
+            # Add some grid-snapped points
+            width = int(bounds.bounds[2])
+            height = int(bounds.bounds[3])
+            for x in range(0, width, 10):
+                for y in range(0, height, 10):
+                    p = Point(x, y)
+                    if shapes['bottom_plate'].intersects(p):
+                        tri.add_node(types.Branch(cxlate(p), types.FRONT))
 
         g = tri.triangulate()
         # g = data['graph'] # router.route(data)
