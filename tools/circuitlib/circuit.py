@@ -127,6 +127,7 @@ class Circuit(object):
 
     def assign_pins(self):
         ''' Evaluate pin assignments '''
+        return
 
         for net_or_pin, component in tqdm(self._defer_pins, desc='pin assignment', unit='pins'):
             # First, look at all of the pins associated with the net; we want
@@ -278,7 +279,7 @@ class Circuit(object):
                 if node:
                     smap.add(node.shape, node)
                 else:
-                    smap.add(shape, types.Obstacle(shape, pad))
+                    smap.add(shape, types.Obstacle(pad.layer, shape, pad))
 
         return {
             'graph': to_route,

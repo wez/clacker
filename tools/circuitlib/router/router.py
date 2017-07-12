@@ -28,6 +28,20 @@ def track_shape(a, b):
     return track
 
 
+def resolve_proxy(node):
+    while hasattr(node, 'proxy_for') and node.proxy_for is not None:
+        node = node.proxy_for
+    return node
+
+
+def is_same_entry(entry, node):
+    if resolve_proxy(entry.value) == node:
+        return True
+    if entry.shape == node.shape:
+        return True
+    return False
+
+
 class Solution(object):
     def __init__(self, phys_map, g, two_nets):
         self.phys_map = phys_map
@@ -50,35 +64,17 @@ class Solution(object):
         s.cost = self.cost
         return s
 
-    def obstacles_in_path(self, a, b, layer, phys_only=False):
-        ''' returns a set of unique obstacles between a and b '''
-        def resolve_proxy(node):
-            while hasattr(node, 'proxy_for') and node.proxy_for is not None:
-                node = node.proxy_for
-            return node
-
+    def _shape_intersects_on_layer(self, a, b, shape, layer, phys_only=False):
         orig_a = a
         orig_b = b
         a = resolve_proxy(a)
         b = resolve_proxy(b)
 
-        def is_same_entry(entry, node):
-            if resolve_proxy(entry.value) == node:
-                return True
-            if entry.shape == node.shape:
-                return True
-            # if entry.shape.centroid == node.shape.centroid:
-            #    return True
-            return False
-
         obstacles = set()
-        track = track_shape(a, b)
-
-        for entry in self.phys_map.intersects(track):
+        for entry in self.phys_map.intersects(shape):
             value = resolve_proxy(entry.value)
-            if hasattr(value, 'layers'):
-                if layer not in value.layers:
-                    continue
+            if value.is_on_layer(layer):
+                continue
             if is_same_entry(entry, a) or is_same_entry(entry, b):
                 #tqdm.write('entry %a is same as %s or %s' % (value, a, b))
                 continue
@@ -100,7 +96,7 @@ class Solution(object):
                     smap.add(edge_track.shape, edge_track)
                 self.layer_smap[layer] = smap
 
-            for entry in smap.intersects(track):
+            for entry in smap.intersects(shape):
                 if isinstance(entry.value, types.Segment):
                     tup = (entry.value.a, entry.value.b)
                     if (tup == (a, b)) or (tup == (b, a)):
@@ -108,10 +104,22 @@ class Solution(object):
                     if (tup == (orig_a, orig_b)) or (tup == (orig_b, orig_a)):
                         continue
                 obstacles.add(entry.value)
+        return obstacles
+
+    def obstacles_in_path(self, a, b, layer, phys_only=False):
+        ''' returns a set of unique obstacles between a and b '''
+
+        orig_a = a
+        orig_b = b
+        a = resolve_proxy(a)
+        b = resolve_proxy(b)
+
+        track = track_shape(a, b)
+        obstacles = self._shape_intersects_on_layer(
+            orig_a, orig_b, track, layer, phys_only=phys_only)
 
         # if phys_only and obstacles:
         #    tqdm.write('obstacles for %s -> %s: %s' % (resolve_proxy(a), resolve_proxy(b), obstacles))
-
         return obstacles
 
     def edge_weight(self, a, b):
@@ -128,6 +136,8 @@ class Solution(object):
         return weight
 
     def compute_edge_weight(self, a, b):
+        a_resolved = resolve_proxy(a)
+        b_resolved = resolve_proxy(a)
         if (hasattr(b, 'proxy_for') and b.proxy_for == a) or (hasattr(a, 'proxy_for') and a.proxy_for == b):
             # it costs nothing to transit a proxy edge
             return 0
@@ -290,13 +300,24 @@ class Solution(object):
 
         return self.cost
 
-    def _avoid_shape(self, shape):
-        return shape.buffer(types.TRACK_RADIUS * 2, resolution=9,
+    def _avoid_shape(self, shape, scale=1):
+        return shape.buffer(types.TRACK_RADIUS * 2 * scale, resolution=9,
                             cap_style=CAP_STYLE.square,
                             join_style=JOIN_STYLE.mitre).simplify(types.TRACK_RADIUS * 2)
 
     def split_for_obstacle(self, a, b, layer, obs):
         avoid = self._avoid_shape(obs.shape)
+        for i in range(1, 5):
+            obstacles = self._shape_intersects_on_layer(a, b, avoid, layer)
+            if len(obstacles) == 0:
+                break
+            for o in obstacles:
+                avoid = unary_union([avoid, o.shape])
+            avoid = avoid.convex_hull.buffer(
+                types.TRACK_RADIUS).simplify(types.TRACK_RADIUS)
+
+        tqdm.write('split_for_obstacle %s -> %s with shape %s' %
+                   (a, b, avoid.wkt))
         branches = []
         closest_a = None
         closest_b = None
@@ -362,7 +383,8 @@ class Solution(object):
         obstacles = set(map(fixup_obs, obstacles))
 
         if not phys_only:
-            tqdm.write('obstacles: %r' % obstacles)
+            for o in obstacles:
+                tqdm.write('   %s' % o)
 
         overlaps = set()
         merged = True
@@ -375,6 +397,7 @@ class Solution(object):
                     obstacles.remove(i)
                     obstacles.remove(j)
                     obs = types.Obstacle(
+                        layer,
                         unary_union([i_shape, j_shape]).convex_hull.buffer(-types.TRACK_RADIUS * 2), (i, j))
                     obstacles.add(obs)
                     merged = True
@@ -452,9 +475,9 @@ class Solution(object):
                 self.add_edge(a_branch, b_branch, layer=layer,
                               track=types.Segment(track, a_branch, b_branch))
 
-                if layer in a.layers:
+                if a.is_on_layer(layer):
                     self.add_edge(a, a_branch, layer=layer)
-                if layer in b.layers:
+                if b.is_on_layer(layer):
                     self.add_edge(b, b_branch, layer=layer)
 
                 self.layer_smap = save_smap
@@ -488,7 +511,7 @@ def route(data):
 
     improved = True
     while improved:
-        attempts = 5
+        attempts = 6
         improved = False
         solution = best_solution.copy()
         while attempts > 0:
@@ -504,15 +527,24 @@ def route(data):
                 best_solution = solution
                 break
 
-    # return solution.g
+    return solution.g
     # Transform the solution to a graph so that caller can render it
     solution = best_solution
     routed_graph = networkx.Graph()
     for _cost, path in tqdm(solution.paths, desc='distil route'):
         for i, j in pairwise(path):
+            layer = solution.g[i][j].get('layer')
+            cost = solution.edge_weight(i, j)
             routed_graph.add_node(i)
             routed_graph.add_node(j)
-            routed_graph.add_edge(i, j, collision=solution.edge_weight(i, j) >= COLLISION_COST,
-                                  layer=solution.g[i][j].get('layer'))
+            routed_graph.add_edge(i, j, collision=cost >= COLLISION_COST,
+                                  layer=layer)
+
+            if cost > 0:
+                obs = solution.obstacles_in_path(i, j, layer)
+                if obs:
+                    tqdm.write('Path %s -> %s has obstacles:' % (i, j))
+                    for o in obs:
+                        tqdm.write('   %s' % o)
 
     return routed_graph

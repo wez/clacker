@@ -45,7 +45,7 @@ class Pcb(targets.Target):
         logical_matrix, physical_matrix = matrix.compute_matrix(
             layout, outputs)
         circuit = self.gen_schematic(layout, shapes, outputs, physical_matrix)
-        #self.route(circuit, outputs)
+        self.route(circuit, outputs)
 
         #self.gen_pycircuit(layout, shapes, outputs, physical_matrix)
 
@@ -137,10 +137,12 @@ class Pcb(targets.Target):
                     stroke=color,
                     stroke_width=0.1)
 
-        for ent in data['smap']._entries:
-            doc.add(ent.shape.buffer(2),
-                    fill='skyblue',
-                    fill_opacity=0.2)
+        if False:
+            # Render physical objects with a blue halo
+            for ent in data['smap']._entries:
+                doc.add(ent.shape.buffer(2),
+                        fill='skyblue',
+                        fill_opacity=0.2)
 
         doc.save(os.path.join(outputs, 'circuit.svg'))
 
@@ -167,6 +169,8 @@ class Pcb(targets.Target):
         surface_mount = True
 
         for y, x, k in tqdm(list(matrix.keys()), desc='key schematic', unit='keys'):
+            if y != 1 or x > 1:
+                continue
             ident = k.identifier
 
             phys = k.centroid()
@@ -193,8 +197,8 @@ class Pcb(targets.Target):
             cdiode.set_ident('D' + ident)
             cdiode.set_position(cxlate(diode_pos))
             cdiode.set_rotation(180 + k.rotation_angle)
-            csw.part['2'] += cdiode.part['2']  # anode
-            cdiode.part['1'] += row_nets[y]    # cathode -> row
+            csw.part['2'] += cdiode.part['A']  # anode
+            cdiode.part['K'] += row_nets[y]    # cathode -> row
 
         for y in range(0, num_rows):
             circuit.defer_pin_assignment(row_nets[y], cmcu)
