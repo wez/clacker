@@ -45,8 +45,7 @@ class Pcb(targets.Target):
         logical_matrix, physical_matrix = matrix.compute_matrix(
             layout, outputs)
         circuit = self.gen_schematic(layout, shapes, outputs, physical_matrix)
-        self.route(circuit, shapes, outputs)
-
+        #self.route(circuit, shapes, outputs)
         #self.gen_pycircuit(layout, shapes, outputs, physical_matrix)
 
     def gen_pycircuit(self, layout, shapes, outputs, matrix):
@@ -237,10 +236,9 @@ class Pcb(targets.Target):
             hole = circuit.hole_m3()
             hole.set_position(cxlate(pt))
 
-        # Ground and supply planes.
+        # Ground plane.
         pour_area = shapes['bottom_plate'].buffer(0)
-        circuit.addArea('F.Cu', circuit.net('GND'), cxlate(pour_area))
-        circuit.addArea('B.Cu', circuit.net('3V3'), cxlate(pour_area))
+        circuit.addArea('B.Cu', circuit.net('GND'), cxlate(pour_area))
 
         circuit.drawShape('Edge.Cuts', cxlate(shapes['bottom_plate']))
 

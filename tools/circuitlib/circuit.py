@@ -129,7 +129,6 @@ class Circuit(object):
 
     def assign_pins(self):
         ''' Evaluate pin assignments '''
-        return
 
         for net_or_pin, component in tqdm(self._defer_pins, desc='pin assignment', unit='pins'):
             # First, look at all of the pins associated with the net; we want

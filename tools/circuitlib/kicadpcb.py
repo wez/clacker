@@ -121,6 +121,9 @@ class Pcb(object):
         if shape.geom_type == 'Polygon':
             last = None
             first = None
+            # Note that while we could emit a fp_poly for this, kicad can't
+            # process it in either the default canvas or the 3D preview, so
+            # we just use a sequence of lines
             for coord in shape.exterior.coords:
                 if not first:
                     first = coord
@@ -133,5 +136,27 @@ class Pcb(object):
             raise Exception('unhandled geometry ' + shape.wkt)
 
     def addArea(self, layerName, net, shape):
-        # TODO: https://github.com/dvc94ch/pykicad/issues/14
-        pass
+        if shape.geom_type == 'Polygon':
+            coords = []
+            for coord in shape.exterior.coords:
+                coords.append(tuple(coord))
+            self.pcb.zones.append(pykicad.pcb.Zone(
+                net=self.net(net).code,
+                net_name=net,
+                layer=layerName,
+                min_thickness=0.254,
+                thermal_gap=0.508,
+                thermal_bridge_width=0.508,
+                arc_segments=16,
+                clearance=0.508,
+                hatch_type='edge',
+                hatch_size=0.508,
+                polygon=coords,
+                # This fills the polygon, but it is not the same as having
+                # kicad fill, respecting the rules specified above!
+                # You'll need to run DRC when you open the board in kicad
+                # to have it update correctly.
+                filled_polygon=coords))
+
+        else:
+            raise Exception('unhandled geometry ' + shape.wkt)
