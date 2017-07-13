@@ -17,25 +17,112 @@ from heapq import heappush, heappop
 ALPHA = 0.1
 
 
+class NodeLayerAssignment(object):
+    ''' Represents the layer assignment for a connectable '''
+
+    def __init__(self, node):
+        self.node = node
+        self.available_layers = set(node.layers)
+        self.configured_layers = set()
+
+
+class SourceSinkNode(object):
+    ''' one of the endpoints of a two net assignment graph '''
+
+    def __init__(self, nla):
+        assert isinstance(nla, NodeLayerAssignment)
+        self.nla = nla
+
+
+class InputTwoNet(object):
+    def __init__(self, a, b):
+        self.source = SourceSinkNode(a)
+        self.sink = SourceSinkNode(b)
+        self.g = self.build_graph()
+
+    def build_graph(self, via_count=2):
+        ''' Build a layer assignment graph for the path a->b. '''
+        g = networkx.DiGraph()
+
+        a = self.source.nla.node
+        b = self.sink.nla.node
+
+        via_points = []
+        left = a.shape.centroid
+        right = b.shape.centroid
+        distance = left.distance(right) / (via_count + 1)
+        for i in range(0, via_count):
+            line = LineString([left, right])
+            vp = line.interpolate(distance)
+            via_points.append(vp)
+            left = vp
+
+        g.add_node(self.source)
+        g.add_node(self.sink)
+
+        nodes_by_layer = {}
+
+        for layer in [types.FRONT, types.BACK]:
+            al = types.Branch(a.shape, layer, proxy_for=a)
+            bl = types.Branch(b.shape, layer, proxy_for=b)
+
+            nodes_by_layer[layer] = [al, bl]
+            g.add_node(al)
+            g.add_node(bl)
+
+            last = al
+            for pt in via_points:
+                vl = types.Branch(pt, layer)
+                nodes_by_layer[layer].append(vl)
+                g.add_edge(last, vl)
+                last = vl
+
+            g.add_edge(last, bl)
+
+            g.add_edge(self.source, al)
+            g.add_edge(bl, self.sink)
+
+        for i, node in enumerate(nodes_by_layer[types.FRONT]):
+            # Can traverse up or down
+            other = nodes_by_layer[types.BACK][i]
+            g.add_edge(node, other)
+            g.add_edge(other, node)
+
+        return g
+
+
 class Configuration(object):
     def __init__(self, two_nets):
-        self.cost = 0
-        self.graphs = {}
-        self.paths = []
-        self.assignment_order = []
-        self.cost_cache = {}
         if isinstance(two_nets, Configuration):
-            # We're making a copy instead
+            # We're making a copy
             src = two_nets
-            self.graphs = dict(src.graphs)
             self.paths = list(src.paths)
             self.cost_cache = dict(src.cost_cache)
             self.assignment_order = list(src.assignment_order)
             self.cost = src.cost
+            # FIXME: need to copy InputTwoNet state!
+            self.two_nets = src.two_nets
         else:
-            self.two_nets = two_nets
-            for net in self.two_nets:
-                self.graphs[net] = self.build_layer_graph(net[0], net[1])
+            # Creating a new instance from a list of two_nets
+            self.cost = 0
+            self.graphs = {}
+            self.paths = []
+            self.assignment_order = []
+            self.cost_cache = {}
+            self.two_nets = []
+
+            nla_map = {}
+
+            def nla_for_node(node):
+                nla = nla_map.get(node)
+                if not nla:
+                    nla = NodeLayerAssignment(node)
+                    nla_map[node] = nla
+                return nla
+
+            for net in two_nets:
+                self.two_nets.append(InputTwoNet(nla_for_node(net[0]),
+                                                 nla_for_node(net[1])))
 
     def copy(self):
         return Configuration(self)
@@ -53,7 +140,7 @@ class Configuration(object):
             detour_cost = 0
             is_via = False
 
-            if isinstance(source, str) or isinstance(target, str):
+            if isinstance(source, SourceSinkNode) or isinstance(target, SourceSinkNode):
                 # Source/sink node traversal.
                 # TODO: take into account layer presence!
                 basic_cost = 0
@@ -144,55 +231,6 @@ class Configuration(object):
                 return (None, None)
             return (dist[target], paths[target])
 
-    def build_layer_graph(self, a, b, via_count=2):
-        ''' Build a layer assignment graph for the path a->b. '''
-        g = networkx.DiGraph()
-
-        via_points = []
-        left = a.shape.centroid
-        right = b.shape.centroid
-        distance = left.distance(right) / (via_count + 1)
-        for i in range(0, via_count):
-            line = LineString([left, right])
-            vp = line.interpolate(distance)
-            via_points.append(vp)
-            left = vp
-
-        g.add_node('source')
-        g.add_node('sink')
-
-        nodes_by_layer = {}
-
-        for layer in [types.FRONT, types.BACK]:
-            al = types.Branch(a.shape, layer, proxy_for=a)
-            bl = types.Branch(b.shape, layer, proxy_for=b)
-
-            nodes_by_layer[layer] = [al, bl]
-            g.add_node(al)
-            g.add_node(bl)
-
-            last = al
-            for pt in via_points:
-                vl = types.Branch(pt, layer)
-                nodes_by_layer[layer].append(vl)
-                g.add_edge(last, vl)
-                last = vl
-
-            g.add_edge(last, bl)
-
-            if a.is_on_layer(layer):
-                g.add_edge('source', al)
-            if b.is_on_layer(layer):
-                g.add_edge(bl, 'sink')
-
-        for i, node in enumerate(nodes_by_layer[types.FRONT]):
-            # Can traverse up or down
-            other = nodes_by_layer[types.BACK][i]
-            g.add_edge(node, other)
-            g.add_edge(other, node)
-
-        return g
-
     def _invalidate_cache_for_path(self, path):
         ''' Invalidate cached cost information for segments that intersect
             those in the newly added path '''
@@ -204,7 +242,7 @@ class Configuration(object):
 
         invalidated = set()
         for source, target in pairwise(path):
-            if isinstance(source, str) or isinstance(target, str):
+            if isinstance(source, SourceSinkNode) or isinstance(target, SourceSinkNode):
                 continue
             my_line = LineString(
                 [source.shape.centroid, target.shape.centroid])
@@ -250,7 +288,7 @@ class Configuration(object):
                 pbar.update(1)
                 best = None
                 for n in free:
-                    cost, path = self.dijkstra(self.graphs[n], 'source', 'sink',
+                    cost, path = self.dijkstra(n.g, n.source, n.sink,
                                                cutoff=best[0] if best is not None else None)
 
                     if cost is None:

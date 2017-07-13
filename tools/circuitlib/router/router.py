@@ -508,9 +508,9 @@ def route(data):
     routed_graph = networkx.Graph()
     for path in tqdm(cfg.paths, desc='distil route'):
         for i, j in pairwise(path):
-            if i == 'source':
+            if isinstance(i, layerassign.SourceSinkNode):
                 continue
-            if j == 'sink':
+            if isinstance(j, layerassign.SourceSinkNode):
                 continue
             layer = None
             #tqdm.write('path segment layers: %r %r' % (i.layers, j.layers))
