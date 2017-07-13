@@ -67,7 +67,7 @@ class Branch(Connectable):
 
     def __str__(self):
         if self.proxy_for:
-            return 'Branch, proxy for %s' % str(self.proxy_for)
+            return 'Branch on %s proxy for %s' % (self.layers, str(self.proxy_for))
         return 'Branch on %s at %r' % (
             self.layers,
             tuple(self.shape.centroid.coords))

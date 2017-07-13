@@ -519,7 +519,12 @@ def route(data):
             cost = cfg.edge_weight(i, j)
             routed_graph.add_node(i)
             routed_graph.add_node(j)
-            routed_graph.add_edge(i, j, collision=cost >= COLLISION_COST,
+            distance = i.shape.centroid.distance(j.shape.centroid)
+            cost = cfg.edge_weight(i, j)
+            tqdm.write('distance=%r cost=%r %s -> %s' % (distance, cost, i, j))
+            routed_graph.add_edge(i, j,
+                                  collision=cost > distance *
+                                  (1 - layerassign.ALPHA),
                                   layer=layer)
 
     return routed_graph

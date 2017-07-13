@@ -63,30 +63,39 @@ class InputTwoNet(object):
         nodes_by_layer = {}
 
         for layer in [types.FRONT, types.BACK]:
-            al = types.Branch(a.shape, layer, proxy_for=a)
-            bl = types.Branch(b.shape, layer, proxy_for=b)
+            if a.is_on_layer(layer):
+                al = types.Branch(a.shape, layer, proxy_for=a)
+                g.add_node(al)
+                g.add_edge(self.source, al)
+            else:
+                al = None
+
+            if b.is_on_layer(layer):
+                bl = types.Branch(b.shape, layer, proxy_for=b)
+                g.add_node(bl)
+                g.add_edge(bl, self.sink)
+            else:
+                bl = None
 
             nodes_by_layer[layer] = [al, bl]
-            g.add_node(al)
-            g.add_node(bl)
 
             last = al
             for pt in via_points:
                 vl = types.Branch(pt, layer)
                 nodes_by_layer[layer].append(vl)
-                g.add_edge(last, vl)
+                if last:
+                    g.add_edge(last, vl)
                 last = vl
 
-            g.add_edge(last, bl)
-
-            g.add_edge(self.source, al)
-            g.add_edge(bl, self.sink)
+            if bl:
+                g.add_edge(last, bl)
 
         for i, node in enumerate(nodes_by_layer[types.FRONT]):
             # Can traverse up or down
             other = nodes_by_layer[types.BACK][i]
-            g.add_edge(node, other)
-            g.add_edge(other, node)
+            if node and other:
+                g.add_edge(node, other)
+                g.add_edge(other, node)
 
         return g
 
@@ -142,13 +151,33 @@ class Configuration(object):
 
             if isinstance(source, SourceSinkNode) or isinstance(target, SourceSinkNode):
                 # Source/sink node traversal.
-                # TODO: take into account layer presence!
                 basic_cost = 0
+
+                if not isinstance(source, SourceSinkNode):
+                    # we can never have SourceSinkNode->SourceSinkNode, so we can
+                    # safely swap the values here to make the code simpler
+                    source, target = target, source
+
+                assert isinstance(source, SourceSinkNode)
+                assert not isinstance(target, SourceSinkNode)
+                assert len(target.layers) == 1
+
+                layer = target.layers[0]
+                if layer not in source.nla.available_layers:
+                    basic_cost = float('inf')
+                elif (len(source.nla.configured_layers) > 0) and (
+                        layer not in source.nla.configured_layers):
+                    basic_cost = float('inf')
+
             else:
                 basic_cost = source.shape.distance(target.shape)
-                is_via = source.layers != target.layers
+                assert len(source.layers) == 1
+                assert len(target.layers) == 1
+                source_layer = source.layers[0]
+                target_layer = target.layers[0]
+                is_via = source_layer != target_layer
                 if not is_via:
-                    layer = source.layers[0]
+                    layer = source_layer
 
                     # Compute the detour cost; this is minimum length of an alternate
                     # path that we'd need to take to avoid intersecting segments
@@ -157,6 +186,9 @@ class Configuration(object):
                         [source.shape.centroid, target.shape.centroid])
                     for path in self.paths:
                         for i, j in pairwise(path):
+                            if i == source or i == target or j == source or j == target:
+                                # intersecting with myself
+                                continue
                             if not (hasattr(i, 'shape') and hasattr(j, 'shape')):
                                 continue
                             other_layer = i.layers[0]
@@ -185,7 +217,7 @@ class Configuration(object):
 
             cost = ((1 - ALPHA) * (basic_cost + detour_cost))
             if is_via:
-                via_count = (len(source.layers) + len(target.layers)) // 2
+                via_count = 1
                 cost += ALPHA * via_count
 
             self.cost_cache[key] = cost
@@ -270,6 +302,18 @@ class Configuration(object):
         self._invalidate_cache_for_path(path)
         self.cost = None
         self.assignment_order.append(node)
+
+        # Track the layer assignments
+        for a, b in pairwise(path):
+            if isinstance(a, SourceSinkNode):
+                source, node = a, b
+            elif isinstance(b, SourceSinkNode):
+                source, node = b, a
+            else:
+                continue
+
+            layer = node.layers[0]
+            source.nla.configured_layers.add(layer)
 
     def compute_cost(self):
         if self.cost is None:
