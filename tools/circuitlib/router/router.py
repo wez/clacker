@@ -2,14 +2,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from tqdm import tqdm
-from . import types
 from ...utils import pairwise
 import networkx
 from shapely.affinity import (translate, scale, rotate)
 from shapely.geometry import (Point, Polygon, MultiPolygon, CAP_STYLE,
                               JOIN_STYLE, box, LineString, MultiLineString, MultiPoint)
 from shapely.ops import unary_union
-from . import spatialmap
+from . import (types, spatialmap, layerassign)
 from heapq import heappush, heappop
 from itertools import count, combinations
 
@@ -502,6 +501,29 @@ def compute_initial_2net_order(two_nets):
 
 
 def route(data):
+    cfg = layerassign.Configuration(data['2nets'])
+    cfg = cfg.initial_assignment()
+    #cfg = cfg.improve()
+
+    routed_graph = networkx.Graph()
+    for path in tqdm(cfg.paths, desc='distil route'):
+        for i, j in pairwise(path):
+            if i == 'source':
+                continue
+            if j == 'sink':
+                continue
+            layer = None
+            #tqdm.write('path segment layers: %r %r' % (i.layers, j.layers))
+            if i.layers == j.layers:
+                layer = i.layers[0]
+            cost = cfg.edge_weight(i, j)
+            routed_graph.add_node(i)
+            routed_graph.add_node(j)
+            routed_graph.add_edge(i, j, collision=cost >= COLLISION_COST,
+                                  layer=layer)
+
+    return routed_graph
+
     two_nets = compute_initial_2net_order(data['2nets'])
     solution = Solution(data['smap'], networkx.Graph(), two_nets)
     solution.build_initial_graph()
@@ -540,7 +562,7 @@ def route(data):
             routed_graph.add_edge(i, j, collision=cost >= COLLISION_COST,
                                   layer=layer)
 
-            if cost > 0:
+            if False and cost > 0:
                 obs = solution.obstacles_in_path(i, j, layer)
                 if obs:
                     tqdm.write('Path %s -> %s has obstacles:' % (i, j))

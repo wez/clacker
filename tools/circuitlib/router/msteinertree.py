@@ -192,44 +192,42 @@ def kruskal(points):
 
 
 def rectilinear_steiner_minimum_spanning_tree(list_of_nodes):
-    with tqdm(desc='compute mst for %d nodes' % len(list_of_nodes)) as pbar:
-        steiner_points = []
+    steiner_points = []
 
-        points = [Point(n.shape.centroid.x, n.shape.centroid.y, n)
-                  for n in list_of_nodes]
+    points = [Point(n.shape.centroid.x, n.shape.centroid.y, n)
+              for n in list_of_nodes]
 
-        RSMT = []
-        candidate_set = [0]  # Just to start the loop
-        while candidate_set:
-            pbar.update(1)
-            max_point = None
+    RSMT = []
+    candidate_set = [0]  # Just to start the loop
+    while candidate_set:
+        max_point = None
 
-            merged_points = points + steiner_points
-            candidate_set = [x for x in hanan_points(
-                merged_points) if delta_mst(merged_points, x) > 0]
+        merged_points = points + steiner_points
+        candidate_set = [x for x in hanan_points(
+            merged_points) if delta_mst(merged_points, x) > 0]
 
-            cost = 0
-            for pt in candidate_set:
-                delta_cost = delta_mst(merged_points, pt)
-                if delta_cost > cost:
-                    max_point = pt
-                    cost = delta_cost
+        cost = 0
+        for pt in candidate_set:
+            delta_cost = delta_mst(merged_points, pt)
+            if delta_cost > cost:
+                max_point = pt
+                cost = delta_cost
 
-            # Remember the current set of steiner_points so that we can tell
-            # when we need to terminate the loop; if we didn't mutate them
-            # then there is no point continuing.
-            before = [p for p in steiner_points]
-            if max_point:
-                steiner_points.append(max_point)
+        # Remember the current set of steiner_points so that we can tell
+        # when we need to terminate the loop; if we didn't mutate them
+        # then there is no point continuing.
+        before = [p for p in steiner_points]
+        if max_point:
+            steiner_points.append(max_point)
 
-            steiner_points = [pt for pt in steiner_points if pt.deg > 2]
+        steiner_points = [pt for pt in steiner_points if pt.deg > 2]
 
-            RSMT = kruskal(points + steiner_points)
+        RSMT = kruskal(points + steiner_points)
 
-            if before == steiner_points:
-                # The add/remove stuff above had no net effect, so terminate
-                # the loop!
-                break
+        if before == steiner_points:
+            # The add/remove stuff above had no net effect, so terminate
+            # the loop!
+            break
 
     def point_to_node(pt):
         ''' converts a Steiner point (which by definition has node=None)

@@ -134,7 +134,7 @@ class Pcb(targets.Target):
 
         colors = {
             'F.Cu': ['green', 'magenta'],
-            'B.Cu': ['grey',  'red']
+            'B.Cu': ['blue',  'red']
         }
         done = set()
         for a, b in g.edges():
