@@ -1,16 +1,16 @@
 from __future__ import absolute_import
 from __future__ import print_function
 import networkx
-from . import (types)
+from . import (types, tri)
 from ...utils import pairwise
 import itertools
 from tqdm import tqdm
 from shapely.geometry import (Point, Polygon, MultiPolygon, CAP_STYLE,
                               JOIN_STYLE, box, LineString, MultiLineString, MultiPoint)
+from shapely.ops import unary_union
 from heapq import heappush, heappop
 
 
-# woot
 # Alpha is a parameter that shifts the balance between vias and
 # overall line length.  It must be > 0 and < 1.
 # A larger value favors longer paths, whereas a smaller value
@@ -114,24 +114,176 @@ class InputTwoNet(object):
         return g
 
 
+class Component(object):
+    ''' Represents a component formed out of connected paths
+        on a layer of a board '''
+
+    def __init__(self, a, b):
+        a = a.centroid
+        b = b.centroid
+        self.terminals = set([(a.x, a.y), (b.x, b.y)])
+        self.lines = [LineString([(a.x, a.y), (b.x, b.y)])]
+        self.shape = self.lines[0]
+
+    def update_with(self, comp):
+        ''' Extends self with the component info from comp '''
+        self.terminals.update(comp.terminals)
+        self.lines += comp.lines
+        self.shape = MultiLineString(self.lines)
+
+    def _buffer(self, shape):
+        return shape.buffer(0.0001, cap_style=CAP_STYLE.square, join_style=JOIN_STYLE.mitre)
+
+    def __str__(self):
+        return '%d terminals %d lines' % (len(self.terminals), len(self.lines))
+
+    def detour_cost(self, line):
+        ''' computes the detour cost for the line (A->B).
+            Precondition is that line intersects with this component!
+            The detour cost is the smallest path around the shape represented
+            by this component.  In the simplest case this component is a line I->J
+            that forms an X shape where it intersects with A->B.  The detour is
+            to form a square path around the outside.  This generalizes to
+            computing the convex hull of the combined component and line; the
+            detour cost is then the smallest distance walking from A to B
+            either clockwise or counter clockwise around the vertices of
+            the hull '''
+        joined = unary_union([self.shape, line])
+        hull = joined.convex_hull
+        if hasattr(hull, 'exterior'):
+            hull = list(hull.exterior.coords)
+            # the final coord loops back to the start; remove it
+            hull.pop()
+        else:
+            hull = list(hull.coords)
+
+        a, b = list(line.coords)
+
+        # Since we buffered out the shapes, we need to make a pass to find
+        # the closest points to our A and B points
+
+        def closest(vert, exclude=None):
+            best = None
+            vert = Point(vert)
+            for p in hull:
+                if exclude and exclude == p:
+                    continue
+                d = vert.distance(Point(p))
+                if not best or d < best[0]:
+                    best = [d, p]
+            return best[1]
+
+        a_close = closest(a)
+        b_close = closest(b, exclude=a_close)
+
+        # Map those to indices
+        for i in range(0, len(hull)):
+            if hull[i] == a_close:
+                a_pos = i
+            if hull[i] == b_close:
+                b_pos = i
+
+        if a_pos == b_pos:
+            print(line)
+            print(hull)
+            print('boom')
+            from ... import svg
+            doc = svg.SVG()
+            doc.add(self.shape, stroke='red',
+                    stroke_width=0.01, fill_opacity=0)
+            doc.add(line, stroke='blue', stroke_width=0.01, fill_opacity=0)
+            doc.add(joined.convex_hull, stroke='grey',
+                    stroke_width=0.01, fill_opacity=0)
+            doc.save('/tmp/gah.svg')
+            assert a_pos != b_pos
+            return 0
+
+        # [A x y B] -> [A, x, y, B] and [B, A]
+        # [x A y B] -> [A, y, B] and [B, x, A]
+        # [B x A y] -> [A, y, B] and [B, x, A]
+
+        a_path = hull[a_pos:] + hull[:-a_pos]
+        a_cost = 0
+        for i, j in pairwise(a_path):
+            a_cost += LineString([i, j]).length
+            if j == b:
+                assert a_cost != 0
+                break
+
+        b_path = hull[b_pos:] + hull[:-b_pos]
+        b_cost = 0
+        for i, j in pairwise(b_path):
+            b_cost += LineString([i, j]).length
+            if j == a:
+                assert b_cost != 0
+                break
+
+        base_detour = LineString([a, a_close]).length + \
+            LineString([b, b_close]).length
+        return min(a_cost, b_cost) + base_detour
+
+
+class ComponentList(object):
+    ''' A list of components on a layer '''
+
+    def __init__(self):
+        self.comps = set()
+
+    def component_for_vertex(self, vert):
+        for comp in self.comps:
+            if vert in comp.terminals:
+                return comp
+        return None
+
+    def add(self, comp):
+        ''' Adds a component, merging it if appropriate '''
+
+        # Find the set of components that share vertices
+        to_merge = set()
+        for vert in comp.terminals:
+            m = self.component_for_vertex(vert)
+            if m:
+                to_merge.add(m)
+                # Remove it from the set; it will be merged
+                # into the component we're adding in this call
+                self.comps.remove(m)
+
+        # Now merge them together
+        for m in to_merge:
+            comp.update_with(m)
+
+        self.comps.add(comp)
+
+    def intersects(self, shape):
+        vert_a, vert_b = list(shape.coords)
+        for comp in self.comps:
+            if vert_a in comp.terminals:
+                continue
+            if vert_b in comp.terminals:
+                continue
+            if shape.intersects(comp.shape):
+                yield comp
+
+
 class Configuration(object):
     def __init__(self, two_nets):
+        self.cost = None
+        self.paths = []
+        self.cost_cache = {}
+        self.assignment_order = []
+        self.components_by_layer = {
+            types.FRONT: ComponentList(),
+            types.BACK: ComponentList(),
+        }
+
         if isinstance(two_nets, Configuration):
             # We're making a copy
             src = two_nets
-            self.paths = list(src.paths)
-            self.cost_cache = dict(src.cost_cache)
-            self.assignment_order = list(src.assignment_order)
-            self.cost = src.cost
-            # FIXME: need to copy InputTwoNet state!
             self.two_nets = src.two_nets
+            self.graphs = src.graphs
         else:
             # Creating a new instance from a list of two_nets
-            self.cost = 0
             self.graphs = {}
-            self.paths = []
-            self.assignment_order = []
-            self.cost_cache = {}
             self.two_nets = []
 
             nla_map = {}
@@ -172,9 +324,9 @@ class Configuration(object):
                     # safely swap the values here to make the code simpler
                     source, target = target, source
 
-                assert isinstance(source, SourceSinkNode)
-                assert not isinstance(target, SourceSinkNode)
-                assert len(target.layers) == 1
+                # assert isinstance(source, SourceSinkNode)
+                # assert not isinstance(target, SourceSinkNode)
+                # assert len(target.layers) == 1
 
                 layer = target.layers[0]
                 if layer not in source.nla.available_layers:
@@ -185,12 +337,12 @@ class Configuration(object):
 
             else:
                 basic_cost = source.shape.distance(target.shape)
-                assert len(source.layers) == 1
-                assert len(target.layers) == 1
+                # assert len(source.layers) == 1
+                # assert len(target.layers) == 1
                 source_layer = source.layers[0]
                 target_layer = target.layers[0]
                 is_via = source_layer != target_layer
-                if not is_via:
+                if not is_via and basic_cost > 0:
                     layer = source_layer
 
                     # Compute the detour cost; this is minimum length of an alternate
@@ -198,36 +350,14 @@ class Configuration(object):
 
                     my_line = LineString(
                         [source.shape.centroid, target.shape.centroid])
-                    for path in self.paths:
-                        for i, j in pairwise(path):
-                            if i == source or i == target or j == source or j == target:
-                                # intersecting with myself
-                                continue
-                            if not (hasattr(i, 'shape') and hasattr(j, 'shape')):
-                                continue
-                            other_layer = i.layers[0]
-                            if other_layer != layer:
-                                # We can't intersect if we're on different layers!
-                                continue
 
-                            seg_line = LineString(
-                                [i.shape.centroid, j.shape.centroid])
-                            if seg_line.intersects(my_line):
-                                # If A->B conflicts with I->J, we compute A->I->B and
-                                # A->J->B as potential alternate paths, and take those
-                                # lengths for our detour value
-                                d1 = LineString([source.shape.centroid, i.shape.centroid]).length + \
-                                    LineString(
-                                        [i.shape.centroid, target.shape.centroid]).length
-                                d2 = LineString([source.shape.centroid, j.shape.centroid]).length + \
-                                    LineString(
-                                        [j.shape.centroid, target.shape.centroid]).length
-
-                                d = min(d1, d2)
-                                if detour_cost == 0:
-                                    detour_cost = d
-                                else:
-                                    detour_cost = min(detour_cost, d)
+                    for comp in self.components_by_layer[layer].intersects(my_line):
+                        d1 = comp.detour_cost(my_line)
+                        #tqdm.write('segment %s intersects with comp %s, cost %s' % (my_line, comp, d1))
+                        if detour_cost == 0:
+                            detour_cost = d1
+                        else:
+                            detour_cost = min(detour_cost, d1)
 
             cost = ((1 - ALPHA) * (basic_cost + detour_cost))
             if is_via:
@@ -281,9 +411,10 @@ class Configuration(object):
         ''' Invalidate cached cost information for segments that intersect
             those in the newly added path '''
         if False:
-            tqdm.write('Blowing cost cache of size %d' %
-                       (cost, len(self.cost_cache)))
             self.cost_cache = {}
+            return
+
+        if not self.paths or not self.cost_cache:
             return
 
         invalidated = set()
@@ -302,18 +433,14 @@ class Configuration(object):
                         invalidated.add(i)
                         invalidated.add(j)
 
-        n = 0
         for key in list(self.cost_cache.keys()):
             a, b = key
             if (a in invalidated) or (b in invalidated):
                 del self.cost_cache[key]
-                n += 1
-
-        return n
 
     def add_path(self, node, path):
-        self.paths.append(path)
         self._invalidate_cache_for_path(path)
+        self.paths.append(path)
         self.cost = None
         self.assignment_order.append(node)
 
@@ -324,6 +451,9 @@ class Configuration(object):
             elif isinstance(b, SourceSinkNode):
                 source, node = b, a
             else:
+                if a.shape.distance(b.shape) > 0:
+                    comp = Component(a.shape, b.shape)
+                    self.components_by_layer[a.layers[0]].add(comp)
                 continue
 
             layer = node.layers[0]
@@ -359,34 +489,45 @@ class Configuration(object):
                 cost, n, path = best
                 free.remove(n)
                 self.add_path(n, path)
-                tqdm.write('best is cost=%r (overall %r)' %
-                           (cost, self.compute_cost()))
+                #tqdm.write('best is cost=%r (overall %r)' % (cost, self.compute_cost()))
 
             return self
 
     def improve(self):
         improved = True
         best_cfg = self
-        while improved:
+        import time
+
+        start = time.time()
+        deadline = start + 30
+        while improved and time.time() < deadline:
             improved = False
-            cfg = best_cfg.copy()
 
-            for i, node in enumerate(tqdm(cfg.assignment_order, desc='improving')):
-                cfg._invalidate_cache_for_path(cfg.paths[i])
-                cfg.paths[i] = []
+            best_order = [x for x in best_cfg.assignment_order]
+            for i, node in enumerate(tqdm(best_order, desc='improving')):
+                if time.time() >= deadline:
+                    break
 
-                cost, path = cfg.dijkstra(cfg.graphs[node], 'source', 'sink')
-                cfg.paths[i] = path
-                cfg._invalidate_cache_for_path(path)
+                order = [x for x in best_order]
+                order.insert(0, order.pop(i))
 
-            cfg.cost = None
-            if cfg.compute_cost() < best_cfg.compute_cost():
-                improved = True
-                tqdm.write('Improved cost from %r to %r' %
-                           (best_cfg.compute_cost(), cfg.compute_cost()))
-                best_cfg = cfg
-            else:
-                tqdm.write('cost did not improve best=%r to attempt=%r' %
-                           (best_cfg.compute_cost(), cfg.compute_cost()))
+                if order == best_order:
+                    continue
+
+                cfg = self.copy()
+                cutoff = None
+                for n in tqdm(order, desc='pass %d' % i):
+                    cost, path = cfg.dijkstra(
+                        n.g, n.source, n.sink, cutoff=cutoff)
+                    cfg.add_path(n, path)
+                    cutoff = best_cfg.compute_cost() - cfg.compute_cost()
+                    if cutoff <= 0:
+                        break
+
+                if cfg.compute_cost() < best_cfg.compute_cost():
+                    improved = True
+                    tqdm.write('Improved cost from %r to %r' %
+                               (best_cfg.compute_cost(), cfg.compute_cost()))
+                    best_cfg = cfg
 
         return cfg

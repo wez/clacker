@@ -501,9 +501,20 @@ def compute_initial_2net_order(two_nets):
 
 
 def route(data):
+    import cProfile
+    import pstats
+
+    pr = cProfile.Profile()
     cfg = layerassign.Configuration(data['2nets'])
     cfg = cfg.initial_assignment()
-    #cfg = cfg.improve()
+
+    pr.enable()
+    cfg = cfg.improve()
+    pr.disable()
+
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr).sort_stats(sortby)
+    ps.print_stats()
 
     routed_graph = networkx.Graph()
     for path in tqdm(cfg.paths, desc='distil route'):
@@ -521,7 +532,7 @@ def route(data):
             routed_graph.add_node(j)
             distance = i.shape.centroid.distance(j.shape.centroid)
             cost = cfg.edge_weight(i, j)
-            tqdm.write('distance=%r cost=%r %s -> %s' % (distance, cost, i, j))
+            #tqdm.write('distance=%r cost=%r %s -> %s' % (distance, cost, i, j))
             routed_graph.add_edge(i, j,
                                   collision=cost > distance *
                                   (1 - layerassign.ALPHA),
