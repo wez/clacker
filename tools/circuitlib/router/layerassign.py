@@ -10,6 +10,7 @@ from shapely.geometry import (Point, Polygon, MultiPolygon, CAP_STYLE,
 from heapq import heappush, heappop
 
 
+# woot
 # Alpha is a parameter that shifts the balance between vias and
 # overall line length.  It must be > 0 and < 1.
 # A larger value favors longer paths, whereas a smaller value

@@ -104,7 +104,7 @@ def do_gencase(args):
 
 
 def do_tidy(args):
-    tidy.tidy(projectdir.Root)
+    tidy.tidy(projectdir.Root, args.all)
 
 
 def do_list(args):
@@ -175,6 +175,8 @@ tidy_parser = subparsers.add_parser('tidy', help='Tidy up code formatting',
     Tidies up the C, C++ and Python source code in the repo to keep it
     looking reasonably uniform
     ''')
+tidy_parser.add_argument(
+    '--all', help='tidy all files rather than just the changed files', action='store_true')
 tidy_parser.set_defaults(func=do_tidy)
 
 list_parser = subparsers.add_parser('list-firmware',
