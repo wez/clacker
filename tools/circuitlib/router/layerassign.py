@@ -87,6 +87,19 @@ class InputTwoNet(object):
                     g.add_edge(last, vl)
                 last = vl
 
+            # Generate the short circuit branches.  The purpose
+            # of these is to avoid understimation of certain
+            # paths through the graph.  Each consecutive sequence
+            # of nodes is connected together
+            for i in range(2, via_count + 2):
+                if nodes_by_layer[layer][i] is None:
+                    continue
+                for seq_len in range(2, via_count):
+                    if i + seq_len < len(nodes_by_layer):
+                        t = nodes_by_layer[layer][i + seq_len]
+                        if t is not None:
+                            g.add_edge(nodes_by_layer[layer][i], t)
+
             if bl:
                 g.add_edge(last, bl)
 
