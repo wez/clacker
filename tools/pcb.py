@@ -126,7 +126,6 @@ class Pcb(targets.Target):
                     if shapes['bottom_plate'].intersects(p):
                         tri.add_node(types.Branch(cxlate(p), types.FRONT))
 
-        #g = tri.triangulate()
         # g = data['graph'] # router.route(data)
         g = router.route(data)
 
@@ -137,41 +136,49 @@ class Pcb(targets.Target):
             'B.Cu': ['blue',  'red']
         }
         done = set()
-        for a, b in g.edges():
-            def draw(a):
-                if a not in done:
-                    if isinstance(a, types.Obstacle) and isinstance(a.value, str) and a.value == 'Edge':
-                        doc.add(a.shape,
-                                stroke='green',
-                                fill_opacity=0,
-                                stroke_width=0.2)
-                    else:
-                        doc.add(a.shape,
-                                stroke='red',
-                                stroke_width=0.2,
-                                fill_opacity=0.4,
-                                fill='red')
-                    done.add(a)
-            draw(a)
-            draw(b)
 
-            if g[a][b].get('via'):
-                doc.add(a.shape.buffer(2),
-                        fill='blue',
-                        fill_opacity=0.4,
-                        stroke='blue',
-                        stroke_width=0.1)
-            else:
-                collision = g[a][b].get('collision', False)
-                layer = g[a][b].get('layer') or 'B.Cu'
-                color = colors[layer]
-                color = color[1] if collision else color[0]
+        def render_from_graph(g):
+            for a, b in g.edges():
+                def draw(a):
+                    if a not in done:
+                        if isinstance(a, types.Obstacle) and isinstance(a.value, str) and a.value == 'Edge':
+                            doc.add(a.shape,
+                                    stroke='green',
+                                    fill_opacity=0,
+                                    stroke_width=0.2)
+                        else:
+                            doc.add(a.shape,
+                                    stroke='red',
+                                    stroke_width=0.2,
+                                    fill_opacity=0.4,
+                                    fill='red')
+                        done.add(a)
+                draw(a)
+                draw(b)
 
-                doc.add(LineString([a.shape.centroid, b.shape.centroid]).buffer(0.125),
-                        fill=color,
-                        fill_opacity=0.4,
-                        stroke=color,
-                        stroke_width=0.1)
+                if g[a][b].get('via'):
+                    doc.add(a.shape.buffer(2),
+                            fill='blue',
+                            fill_opacity=0.4,
+                            stroke='blue',
+                            stroke_width=0.1)
+                else:
+                    collision = g[a][b].get('collision', False)
+                    layer = g[a][b].get('layer') or 'B.Cu'
+                    color = colors[layer]
+                    color = color[1] if collision else color[0]
+
+                    doc.add(LineString([a.shape.centroid, b.shape.centroid]).buffer(0.125),
+                            fill=color,
+                            fill_opacity=0.4,
+                            stroke=color,
+                            stroke_width=0.1)
+
+        if False:
+            tri_g = tri.triangulate()
+            render_from_graph(tri_g)
+
+        render_from_graph(g)
 
         if False:
             # Render physical objects with a blue halo

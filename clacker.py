@@ -248,7 +248,6 @@ gencase_parser.add_argument(
 gencase_parser.set_defaults(func=do_gencase)
 
 if speedups.available:
-    print('Enabling shapely speedups')
     speedups.enable()
 
 args = parser.parse_args()
