@@ -13,21 +13,23 @@ from . import (types, spatialmap, layerassign)
 import random
 
 
-def route(data):
-    import cProfile
-    import pstats
-
-    pr = cProfile.Profile()
+def route(data, profile=False):
     cfg = layerassign.Configuration(data['2nets'])
     cfg = cfg.initial_assignment()
 
-    pr.enable()
-    cfg = cfg.improve()
-    pr.disable()
+    if profile:
+        import cProfile
+        import pstats
 
-    sortby = 'cumulative'
-    ps = pstats.Stats(pr).sort_stats(sortby)
-    ps.print_stats()
+        pr = cProfile.Profile()
+        pr.enable()
+
+    cfg = cfg.improve()
+
+    if profile:
+        pr.disable()
+        ps = pstats.Stats(pr).sort_stats('cumulative')
+        ps.print_stats()
 
     routed_graph = networkx.Graph()
     for path in tqdm(cfg.paths, desc='distil route'):
