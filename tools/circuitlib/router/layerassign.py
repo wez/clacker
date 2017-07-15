@@ -286,38 +286,21 @@ class Configuration(object):
             types.FRONT: ComponentList(),
             types.BACK: ComponentList(),
         }
+        self.two_nets = []
+        self.raw_two_nets = two_nets
 
-        if isinstance(two_nets, Configuration):
-            # We're making a copy
-            src = two_nets
-            self.two_nets = src.two_nets
-            self.graphs = src.graphs
-        else:
-            # Creating a new instance from a list of two_nets
-            self.graphs = {}
-            self.two_nets = []
+        nla_map = {}
 
-            nla_map = {}
+        def nla_for_node(node):
+            nla = nla_map.get(node)
+            if not nla:
+                nla = NodeLayerAssignment(node)
+                nla_map[node] = nla
+            return nla
 
-            def nla_for_node(node):
-                nla = nla_map.get(node)
-                if not nla:
-                    nla = NodeLayerAssignment(node)
-                    nla_map[node] = nla
-                return nla
-
-            for net in two_nets:
-                self.two_nets.append(InputTwoNet(nla_for_node(net[0]),
-                                                 nla_for_node(net[1])))
-
-    def copy(self):
-        return Configuration(self)
-
-    def clear(self):
-        self.paths = []
-        self.cost_cache = {}
-        self.assignment_order = []
-        self.cost = None
+        for net in two_nets:
+            self.two_nets.append(InputTwoNet(nla_for_node(net[0]),
+                                             nla_for_node(net[1])))
 
     def edge_weight(self, source, target, edgedata):
         key = (source, target)
@@ -527,19 +510,25 @@ class Configuration(object):
                 if order == best_order:
                     continue
 
-                cfg = self.copy()
+                cfg = Configuration(self.raw_two_nets)
                 cutoff = None
+                failed = False
                 for n in tqdm(order, desc='pass %d' % i):
                     cost, path = cfg.dijkstra(
                         n.g, n.source, n.sink, cutoff=cutoff)
                     if cost is None:
-                        continue
+                        # It's not possible to yield a better result
+                        # than the best we already have
+                        failed = True
+                        break
                     cfg.add_path(Path(cost, n, path))
                     cutoff = best_cfg.compute_cost() - cfg.compute_cost()
                     if cutoff <= 0:
+                        # Can't do well enough to improve on this round
+                        failed = True
                         break
 
-                if cfg.compute_cost() < best_cfg.compute_cost():
+                if not failed and cfg.compute_cost() < best_cfg.compute_cost():
                     improved = True
                     tqdm.write('Improved cost from %r to %r' %
                                (best_cfg.compute_cost(), cfg.compute_cost()))
