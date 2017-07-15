@@ -268,6 +268,15 @@ class ComponentList(object):
                 yield comp
 
 
+class Path(object):
+    ''' Holds some path related state '''
+
+    def __init__(self, cost, input_2net, path):
+        self.cost = cost
+        self.input_2net = input_2net
+        self.path = path
+
+
 class Configuration(object):
     def __init__(self, two_nets):
         self.cost = None
@@ -356,7 +365,6 @@ class Configuration(object):
                     # Compute the detour cost; this is minimum length of an alternate
                     # path that we'd need to take to avoid intersecting segments
 
-
                     for comp in self.components_by_layer[layer].intersects(my_line):
                         d1 = comp.detour_cost(my_line)
                         #tqdm.write('segment %s intersects with comp %s, cost %s' % (my_line, comp, d1))
@@ -419,21 +427,20 @@ class Configuration(object):
     def _invalidate_cache_for_path(self, path):
         ''' Invalidate cached cost information for segments that intersect
             those in the newly added path '''
-        if False:
-            self.cost_cache = {}
-            return
-
         if not self.paths or not self.cost_cache:
             return
 
+        g = path.input_2net.g
+
         invalidated = set()
-        for source, target in pairwise(path):
+        for source, target in pairwise(path.path):
             if isinstance(source, SourceSinkNode) or isinstance(target, SourceSinkNode):
                 continue
-            my_line = LineString(
-                [source.shape.centroid, target.shape.centroid])
-            for path in self.paths:
-                for i, j in pairwise(path):
+            my_line = g[source][target].get('line')
+            if not my_line:
+                continue
+            for p in self.paths:
+                for i, j in pairwise(p.path):
                     if not (hasattr(i, 'shape') and hasattr(j, 'shape')):
                         continue
 
@@ -447,14 +454,14 @@ class Configuration(object):
             if (a in invalidated) or (b in invalidated):
                 del self.cost_cache[key]
 
-    def add_path(self, node, path):
+    def add_path(self, path):
         self._invalidate_cache_for_path(path)
         self.paths.append(path)
         self.cost = None
-        self.assignment_order.append(node)
+        self.assignment_order.append(path.input_2net)
 
         # Track the layer assignments
-        for a, b in pairwise(path):
+        for a, b in pairwise(path.path):
             if isinstance(a, SourceSinkNode):
                 source, node = a, b
             elif isinstance(b, SourceSinkNode):
@@ -472,7 +479,7 @@ class Configuration(object):
         if self.cost is None:
             self.cost = 0
             for path in tqdm(self.paths, desc='compute cost'):
-                for a, b in pairwise(path):
+                for a, b in pairwise(path.path):
                     self.cost += self.edge_weight(a, b)
 
         return self.cost
@@ -486,18 +493,17 @@ class Configuration(object):
                 best = None
                 for n in free:
                     cost, path = self.dijkstra(n.g, n.source, n.sink,
-                                               cutoff=best[0] if best is not None else None)
+                                               cutoff=best.cost if best is not None else None)
 
                     if cost is None:
                         # hit the cutoff
                         continue
 
-                    if not best or cost < best[0]:
-                        best = (cost, n, path)
+                    if not best or cost < best.cost:
+                        best = Path(cost, n, path)
 
-                cost, n, path = best
-                free.remove(n)
-                self.add_path(n, path)
+                free.remove(best.input_2net)
+                self.add_path(best)
                 #tqdm.write('best is cost=%r (overall %r)' % (cost, self.compute_cost()))
 
             return self
@@ -531,7 +537,9 @@ class Configuration(object):
                 for n in tqdm(order, desc='pass %d' % i):
                     cost, path = cfg.dijkstra(
                         n.g, n.source, n.sink, cutoff=cutoff)
-                    cfg.add_path(n, path)
+                    if cost is None:
+                        continue
+                    cfg.add_path(Path(cost, n, path))
                     cutoff = best_cfg.compute_cost() - cfg.compute_cost()
                     if cutoff <= 0:
                         break

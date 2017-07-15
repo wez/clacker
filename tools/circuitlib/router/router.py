@@ -518,7 +518,7 @@ def route(data):
 
     routed_graph = networkx.Graph()
     for path in tqdm(cfg.paths, desc='distil route'):
-        for i, j in pairwise(path):
+        for i, j in pairwise(path.path):
             if isinstance(i, layerassign.SourceSinkNode):
                 continue
             if isinstance(j, layerassign.SourceSinkNode):
