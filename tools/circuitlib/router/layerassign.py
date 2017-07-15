@@ -405,7 +405,10 @@ class Configuration(object):
                         paths[u] = paths[v] + [u]
             if target not in paths:
                 return (None, None)
-            return (dist[target], paths[target])
+            cost = 0
+            for p in paths[target]:
+                cost += dist[p]
+            return (cost, paths[target])
 
     def _invalidate_cache_for_path(self, path):
         ''' Invalidate cached cost information for segments that intersect
