@@ -137,9 +137,6 @@ class Component(object):
         self.lines += comp.lines
         self.shape = MultiLineString(self.lines)
 
-    def _buffer(self, shape):
-        return shape.buffer(0.0001, cap_style=CAP_STYLE.square, join_style=JOIN_STYLE.mitre)
-
     def __str__(self):
         return '%d terminals %d lines' % (len(self.terminals), len(self.lines))
 
