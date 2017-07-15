@@ -502,6 +502,9 @@ class Configuration(object):
         import time
 
         start = time.time()
+
+        # Setting a deadline because there are a lot of combinations to
+        # try and it is relatively expensive
         deadline = start + 30
         while improved and time.time() < deadline:
             improved = False
