@@ -527,11 +527,10 @@ def route(data):
             #tqdm.write('path segment layers: %r %r' % (i.layers, j.layers))
             if i.layers == j.layers:
                 layer = i.layers[0]
-            cost = cfg.edge_weight(i, j)
+            cost = cfg.edge_weight(i, j, path.input_2net.g[i][j])
             routed_graph.add_node(i)
             routed_graph.add_node(j)
             distance = i.shape.centroid.distance(j.shape.centroid)
-            cost = cfg.edge_weight(i, j)
             #tqdm.write('distance=%r cost=%r %s -> %s' % (distance, cost, i, j))
             routed_graph.add_edge(i, j,
                                   collision=cost > distance *

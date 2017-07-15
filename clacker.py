@@ -32,6 +32,7 @@ if not munge_path():
     munge_path()
 
 
+from shapely import speedups
 from tools import (
     case,
     infofile,
@@ -245,6 +246,10 @@ gencase_parser = subparsers.add_parser('gen-case', help='Generate case',
 gencase_parser.add_argument(
     'case', help='which case to generate', nargs='*')
 gencase_parser.set_defaults(func=do_gencase)
+
+if speedups.available:
+    print('Enabling shapely speedups')
+    speedups.enable()
 
 args = parser.parse_args()
 if hasattr(args, 'func'):

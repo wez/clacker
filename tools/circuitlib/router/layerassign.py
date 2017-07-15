@@ -10,7 +10,6 @@ from shapely.geometry import (Point, Polygon, MultiPolygon, CAP_STYLE,
 from shapely.ops import unary_union
 from heapq import heappush, heappop
 
-
 # Alpha is a parameter that shifts the balance between vias and
 # overall line length.  It must be > 0 and < 1.
 # A larger value favors longer paths, whereas a smaller value
@@ -320,16 +319,16 @@ class Configuration(object):
         self.assignment_order = []
         self.cost = None
 
-    def edge_weight(self, source, target, edgedata=None):
+    def edge_weight(self, source, target, edgedata):
         key = (source, target)
         cost = self.cost_cache.get(key)
         if cost is None:
             detour_cost = 0
-            is_via = edgedata.get('via') if edgedata else False
+            basic_cost = 0
+            is_via = edgedata.get('via', False)
 
             if isinstance(source, SourceSinkNode) or isinstance(target, SourceSinkNode):
                 # Source/sink node traversal.
-                basic_cost = 0
 
                 if not isinstance(source, SourceSinkNode):
                     # we can never have SourceSinkNode->SourceSinkNode, so we can
@@ -347,36 +346,28 @@ class Configuration(object):
                         layer not in source.nla.configured_layers):
                     basic_cost = float('inf')
 
-            else:
-                my_line = edgedata.get('line') if edgedata else None
-                if not my_line:
-                    my_line = LineString(
-                        [source.shape.centroid, target.shape.centroid])
+            elif not is_via:
+                my_line = edgedata.get('line')
                 basic_cost = my_line.length
 
                 # assert len(source.layers) == 1
                 # assert len(target.layers) == 1
-                source_layer = source.layers[0]
-                target_layer = target.layers[0]
-                is_via = source_layer != target_layer
-                if not is_via and basic_cost > 0:
-                    layer = source_layer
+                layer = source.layers[0]
 
-                    # Compute the detour cost; this is minimum length of an alternate
-                    # path that we'd need to take to avoid intersecting segments
+                # Compute the detour cost; this is minimum length of an alternate
+                # path that we'd need to take to avoid intersecting segments
 
-                    for comp in self.components_by_layer[layer].intersects(my_line):
-                        d1 = comp.detour_cost(my_line)
-                        #tqdm.write('segment %s intersects with comp %s, cost %s' % (my_line, comp, d1))
-                        if detour_cost == 0:
-                            detour_cost = d1
-                        else:
-                            detour_cost = min(detour_cost, d1)
+                for comp in self.components_by_layer[layer].intersects(my_line):
+                    d1 = comp.detour_cost(my_line)
+                    #tqdm.write('segment %s intersects with comp %s, cost %s' % (my_line, comp, d1))
+                    if detour_cost == 0:
+                        detour_cost = d1
+                    else:
+                        detour_cost = min(detour_cost, d1)
 
             cost = ((1 - ALPHA) * (basic_cost + detour_cost))
             if is_via:
-                via_count = 1
-                cost += ALPHA * via_count
+                cost += ALPHA
 
             self.cost_cache[key] = cost
         return cost
@@ -441,11 +432,14 @@ class Configuration(object):
                 continue
             for p in self.paths:
                 for i, j in pairwise(p.path):
+                    if (i in invalidated) and (j in invalidated):
+                        continue
+
                     if not (hasattr(i, 'shape') and hasattr(j, 'shape')):
                         continue
 
-                    seg_line = LineString([i.shape.centroid, j.shape.centroid])
-                    if seg_line.intersects(my_line):
+                    seg_line = p.input_2net.g[i][j].get('line')
+                    if seg_line and seg_line.intersects(my_line):
                         invalidated.add(i)
                         invalidated.add(j)
 
@@ -467,7 +461,7 @@ class Configuration(object):
             elif isinstance(b, SourceSinkNode):
                 source, node = b, a
             else:
-                if a.shape.distance(b.shape) > 0:
+                if a.shape != b.shape:
                     comp = Component(a.shape, b.shape)
                     self.components_by_layer[a.layers[0]].add(comp)
                 continue
@@ -480,7 +474,8 @@ class Configuration(object):
             self.cost = 0
             for path in tqdm(self.paths, desc='compute cost'):
                 for a, b in pairwise(path.path):
-                    self.cost += self.edge_weight(a, b)
+                    self.cost += self.edge_weight(a,
+                                                  b, path.input_2net.g[a][b])
 
         return self.cost
 
