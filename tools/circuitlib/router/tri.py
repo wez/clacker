@@ -1177,7 +1177,7 @@ def straight_walk(P, Q):
 #             raise TopologyViolationError("Unwanted constrained segment collision detected")
         if t.constrained[side]:
             raise TopologyViolationError(
-                "Unwanted constrained segment collision detected")
+                "Unwanted constrained segment collision detected %s %s" % (P, Q))
         t = t.neighbours[side]
         out.append(t)
 
@@ -1233,7 +1233,7 @@ class ConstraintInserter(object):
                 print(err)
                 # The upstream code just prints and swallows these errors, but
                 # I want them to fail the program
-                raise
+                # raise
             if (j % 10000) == 0:
                 logging.debug(" " + str(datetime.now()) + str(j))
         self.remove_empty_triangles()
@@ -1768,6 +1768,15 @@ class ToPointsAndSegments(object):
         self.segments = []
         self.infos = []
         self._points_idx = {}
+
+    def copy(self):
+        ''' make a copy of the state so far '''
+        result = ToPointsAndSegments()
+        result.points = list(self.points)
+        result.segments = list(self.segments)
+        result.infos = list(self.infos)
+        result._points_idx = dict(self._points_idx)
+        return result
 
     def add_polygon(self, polygon):
         """Add a polygon its points and segments to the global collection

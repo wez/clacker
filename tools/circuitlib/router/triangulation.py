@@ -15,39 +15,57 @@ import numpy
 
 
 class Triangulation(object):
-    def __init__(self):
-        self._ctx = tri.ToPointsAndSegments()
-        self._coord_to_node = {}
+    def __init__(self, other=None):
+        self._cdt = None
+        if other:
+            assert isinstance(other, Triangulation)
+            self._ctx = other._ctx.copy()
+            self._coord_to_node = dict(other._coord_to_node)
+        else:
+            self._ctx = tri.ToPointsAndSegments()
+            self._coord_to_node = {}
+
+    def copy(self):
+        return Triangulation(self)
 
     def triangulate(self):
         with tqdm(desc='triangulating') as pbar:
             g = networkx.Graph()
 
-            cdt = tri.triangulate(
+            self._cdt = tri.triangulate(
                 self._ctx.points, self._ctx.infos, self._ctx.segments)
 
-            for t in tri.TriangleIterator(cdt, finite_only=True):
+            for t in tri.TriangleIterator(self._cdt, finite_only=True):
                 pbar.update(1)
                 for a, b in [(0, 1), (1, 2), (2, 0)]:
 
                     v1 = t.vertices[a]
                     v2 = t.vertices[b]
 
-                    node_a = self._coord_to_node[(v1.x, v1.y)]
-                    node_b = self._coord_to_node[(v2.x, v2.y)]
+                    node_a = self._coord_to_node.get((v1.x, v1.y))
+                    if not node_a:
+                        node_a = types.Branch(Point(v1.x, v1.y))
+                    node_b = self._coord_to_node.get((v2.x, v2.y))
+                    if not node_b:
+                        node_b = types.Branch(Point(v2.x, v2.y))
 
                     g.add_node(node_a)
                     g.add_node(node_b)
 
-                    d = node_a.shape.centroid.distance(node_b.shape.centroid)
-                    if isinstance(node_a, types.Obstacle) and isinstance(node_b, types.Obstacle):
-                        d += router.COLLISION_COST
-                    g.add_edge(node_a, node_b, weight=d,
-                               collision=d > router.COLLISION_COST)
+                    g.add_edge(node_a, node_b)
 
         tqdm.write('Triangulated graph with %d nodes and %d edges' %
                    (len(g), g.size()))
         return g
+
+    def add_2net(self, a, b):
+        a_pos = (a.node.shape.centroid.x, a.node.shape.centroid.y)
+        b_pos = (b.node.shape.centroid.x, b.node.shape.centroid.y)
+        if a_pos == b_pos:
+            raise ValueError('terminals have the same location')
+        self._coord_to_node[a_pos] = a
+        points = [a_pos, b_pos]
+        self._ctx.add_polygon([points])
 
     def add_node(self, node):
         is_edge = isinstance(node, types.Obstacle) and isinstance(
