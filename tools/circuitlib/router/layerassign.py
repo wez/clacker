@@ -18,6 +18,10 @@ from heapq import heappush, heappop
 ALPHA = 0.1
 
 
+def line_between(shape1, shape2):
+    return LineString([shape1.centroid, shape2.centroid])
+
+
 class NodeLayerAssignment(object):
     ''' Represents the layer assignment for a connectable '''
 
@@ -85,8 +89,12 @@ class InputTwoNet(object):
                 vl = types.Branch(pt, layer)
                 nodes_by_layer[layer].append(vl)
                 if last:
-                    g.add_edge(last, vl)
+                    g.add_edge(last, vl, line=line_between(
+                        last.shape, vl.shape))
                 last = vl
+
+            if bl:
+                g.add_edge(last, bl, line=line_between(last.shape, bl.shape))
 
             # Generate the short circuit branches.  The purpose
             # of these is to avoid understimation of certain
@@ -99,17 +107,15 @@ class InputTwoNet(object):
                     if i + seq_len < len(nodes_by_layer):
                         t = nodes_by_layer[layer][i + seq_len]
                         if t is not None:
-                            g.add_edge(nodes_by_layer[layer][i], t)
-
-            if bl:
-                g.add_edge(last, bl)
+                            g.add_edge(nodes_by_layer[layer][i], t, line=line_between(
+                                nodes_by_layer[layer][i].shape, t.shape))
 
         for i, node in enumerate(nodes_by_layer[types.FRONT]):
             # Can traverse up or down
             other = nodes_by_layer[types.BACK][i]
             if node and other:
-                g.add_edge(node, other)
-                g.add_edge(other, node)
+                g.add_edge(node, other, via=True)
+                g.add_edge(other, node, via=True)
 
         return g
 
@@ -308,12 +314,12 @@ class Configuration(object):
         self.assignment_order = []
         self.cost = None
 
-    def edge_weight(self, source, target):
+    def edge_weight(self, source, target, edgedata=None):
         key = (source, target)
         cost = self.cost_cache.get(key)
         if cost is None:
             detour_cost = 0
-            is_via = False
+            is_via = edgedata.get('via') if edgedata else False
 
             if isinstance(source, SourceSinkNode) or isinstance(target, SourceSinkNode):
                 # Source/sink node traversal.
@@ -336,7 +342,12 @@ class Configuration(object):
                     basic_cost = float('inf')
 
             else:
-                basic_cost = source.shape.distance(target.shape)
+                my_line = edgedata.get('line') if edgedata else None
+                if not my_line:
+                    my_line = LineString(
+                        [source.shape.centroid, target.shape.centroid])
+                basic_cost = my_line.length
+
                 # assert len(source.layers) == 1
                 # assert len(target.layers) == 1
                 source_layer = source.layers[0]
@@ -348,8 +359,6 @@ class Configuration(object):
                     # Compute the detour cost; this is minimum length of an alternate
                     # path that we'd need to take to avoid intersecting segments
 
-                    my_line = LineString(
-                        [source.shape.centroid, target.shape.centroid])
 
                     for comp in self.components_by_layer[layer].intersects(my_line):
                         d1 = comp.detour_cost(my_line)
@@ -388,7 +397,7 @@ class Configuration(object):
                     break
 
                 for u, e in G_succ[v].items():
-                    cost = self.edge_weight(v, u)
+                    cost = self.edge_weight(v, u, e)
                     if cost is None:
                         continue
                     vu_dist = dist[v] + cost
