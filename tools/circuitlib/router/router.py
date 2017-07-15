@@ -523,11 +523,12 @@ def route(data):
                 continue
             if isinstance(j, layerassign.SourceSinkNode):
                 continue
+            g = path.input_2net.g
             layer = None
             #tqdm.write('path segment layers: %r %r' % (i.layers, j.layers))
             if i.layers == j.layers:
                 layer = i.layers[0]
-            cost = cfg.edge_weight(i, j, path.input_2net.g[i][j])
+            cost = cfg.edge_weight(i, j, g[i][j])
             routed_graph.add_node(i)
             routed_graph.add_node(j)
             distance = i.shape.centroid.distance(j.shape.centroid)
@@ -535,7 +536,8 @@ def route(data):
             routed_graph.add_edge(i, j,
                                   collision=cost > distance *
                                   (1 - layerassign.ALPHA),
-                                  layer=layer)
+                                  layer=layer,
+                                  via=g[i][j].get('via'))
 
     return routed_graph
 

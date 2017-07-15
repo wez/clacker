@@ -44,7 +44,7 @@ class InputTwoNet(object):
         self.sink = SourceSinkNode(b)
         self.g = self.build_graph()
 
-    def build_graph(self, via_count=2):
+    def build_graph(self, via_count=3):
         ''' Build a layer assignment graph for the path a->b. '''
         g = networkx.DiGraph()
 
@@ -113,8 +113,8 @@ class InputTwoNet(object):
             # Can traverse up or down
             other = nodes_by_layer[types.BACK][i]
             if node and other:
-                g.add_edge(node, other, via=True)
-                g.add_edge(other, node, via=True)
+                g.add_edge(node, other, via=i > 1)
+                g.add_edge(other, node, via=i > 1)
 
         return g
 
@@ -331,22 +331,23 @@ class Configuration(object):
 
             elif not is_via:
                 my_line = edgedata.get('line')
-                basic_cost = my_line.length
+                if my_line:
+                    basic_cost = my_line.length
 
-                # assert len(source.layers) == 1
-                # assert len(target.layers) == 1
-                layer = source.layers[0]
+                    # assert len(source.layers) == 1
+                    # assert len(target.layers) == 1
+                    layer = source.layers[0]
 
-                # Compute the detour cost; this is minimum length of an alternate
-                # path that we'd need to take to avoid intersecting segments
+                    # Compute the detour cost; this is minimum length of an alternate
+                    # path that we'd need to take to avoid intersecting segments
 
-                for comp in self.components_by_layer[layer].intersects(my_line):
-                    d1 = comp.detour_cost(my_line)
-                    #tqdm.write('segment %s intersects with comp %s, cost %s' % (my_line, comp, d1))
-                    if detour_cost == 0:
-                        detour_cost = d1
-                    else:
-                        detour_cost = min(detour_cost, d1)
+                    for comp in self.components_by_layer[layer].intersects(my_line):
+                        d1 = comp.detour_cost(my_line)
+                        #tqdm.write('segment %s intersects with comp %s, cost %s' % (my_line, comp, d1))
+                        if detour_cost == 0:
+                            detour_cost = d1
+                        else:
+                            detour_cost = min(detour_cost, d1)
 
             cost = ((1 - ALPHA) * (basic_cost + detour_cost))
             if is_via:
@@ -495,7 +496,7 @@ class Configuration(object):
 
         # Setting a deadline because there are a lot of combinations to
         # try and it is relatively expensive
-        deadline = start + 30
+        deadline = start + 10
         while improved and time.time() < deadline:
             improved = False
 
