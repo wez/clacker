@@ -8,6 +8,7 @@ from tqdm import tqdm
 from shapely.geometry import (Point, Polygon, MultiPolygon, CAP_STYLE,
                               JOIN_STYLE, box, LineString, MultiLineString, MultiPoint)
 from shapely.ops import unary_union
+from shapely.prepared import prep
 from heapq import heappush, heappop
 
 # Alpha is a parameter that shifts the balance between vias and
@@ -258,6 +259,7 @@ class ComponentList(object):
 
     def intersects(self, shape):
         vert_a, vert_b = list(shape.coords)
+        shape = prep(shape)
         for comp in self.comps:
             if vert_a in comp.terminals:
                 continue
