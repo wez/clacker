@@ -124,7 +124,8 @@ class Pcb(targets.Target):
                 for y in range(0, height, 10):
                     p = Point(x, y)
                     if shapes['bottom_plate'].intersects(p):
-                        tri.add_node(types.Branch(cxlate(p), types.FRONT))
+                        tri.add_node(types.Branch(
+                            cxlate(p), layer=types.FRONT))
 
         # g = data['graph'] # router.route(data)
         g = router.route(data)

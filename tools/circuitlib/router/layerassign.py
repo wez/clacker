@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 import networkx
-from . import (types, tri)
+from . import (types, tri, dijkstra)
 from ...utils import pairwise
 import itertools
 from tqdm import tqdm
@@ -9,7 +9,6 @@ from shapely.geometry import (Point, Polygon, MultiPolygon, CAP_STYLE,
                               JOIN_STYLE, box, LineString, MultiLineString, MultiPoint)
 from shapely.ops import unary_union
 from shapely.prepared import prep
-from heapq import heappush, heappop
 
 # Alpha is a parameter that shifts the balance between vias and
 # overall line length.  It must be > 0 and < 1.
@@ -52,6 +51,13 @@ class InputTwoNet(object):
         a = self.source.nla.node
         b = self.sink.nla.node
 
+        if a.net != b.net:
+            print('a.net', a.net)
+            print('a', a)
+            print('b.net', b.net)
+            print('b', b)
+            assert a.net == b.net
+
         via_points = []
         left = a.shape.centroid
         right = b.shape.centroid
@@ -69,14 +75,14 @@ class InputTwoNet(object):
 
         for layer in [types.FRONT, types.BACK]:
             if a.is_on_layer(layer):
-                al = types.Branch(a.shape, layer, proxy_for=a)
+                al = types.Branch(a.shape, net=a.net, layer=layer, proxy_for=a)
                 g.add_node(al)
                 g.add_edge(self.source, al)
             else:
                 al = None
 
             if b.is_on_layer(layer):
-                bl = types.Branch(b.shape, layer, proxy_for=b)
+                bl = types.Branch(b.shape, net=b.net, layer=layer, proxy_for=b)
                 g.add_node(bl)
                 g.add_edge(bl, self.sink)
             else:
@@ -86,7 +92,7 @@ class InputTwoNet(object):
 
             last = al
             for pt in via_points:
-                vl = types.Branch(pt, layer)
+                vl = types.Branch(pt, net=a.net, layer=layer)
                 nodes_by_layer[layer].append(vl)
                 if last:
                     g.add_edge(last, vl, line=line_between(
@@ -358,49 +364,6 @@ class Configuration(object):
             self.cost_cache[key] = cost
         return cost
 
-    def dijkstra(self, G, source, target, cutoff=None):
-        with tqdm(desc='path finding') as pbar:
-            G_succ = G.succ if G.is_directed() else G.adj
-
-            paths = {source: [source]}
-            push = heappush
-            pop = heappop
-            dist = {}  # dictionary of final distances
-            seen = {source: 0}
-            c = itertools.count()
-            fringe = []  # use heapq with (distance,label) tuples
-            push(fringe, (0, next(c), source))
-            while fringe:
-                (d, _, v) = pop(fringe)
-                if v in dist:
-                    continue  # already searched this node.
-                dist[v] = d
-                if v == target:
-                    break
-
-                for u, e in G_succ[v].items():
-                    cost = self.edge_weight(v, u, e)
-                    if cost is None:
-                        continue
-                    vu_dist = dist[v] + cost
-                    if cutoff is not None:
-                        if vu_dist > cutoff:
-                            continue
-                    if u in dist:
-                        if vu_dist < dist[u]:
-                            raise ValueError('Contradictory paths found:',
-                                             'negative weights?')
-                    elif u not in seen or vu_dist < seen[u]:
-                        seen[u] = vu_dist
-                        push(fringe, (vu_dist, next(c), u))
-                        paths[u] = paths[v] + [u]
-            if target not in paths:
-                return (None, None)
-            cost = 0
-            for p in paths[target]:
-                cost += dist[p]
-            return (cost, paths[target])
-
     def _invalidate_cache_for_path(self, path):
         ''' Invalidate cached cost information for segments that intersect
             those in the newly added path '''
@@ -469,12 +432,14 @@ class Configuration(object):
         ''' Assign 2net in ascending order of cost '''
         with tqdm(desc='initial 2net assignment', total=len(self.two_nets)) as pbar:
             free = set(self.two_nets)
+
             while len(free) > 0:
                 pbar.update(1)
                 best = None
                 for n in free:
-                    cost, path = self.dijkstra(n.g, n.source, n.sink,
-                                               cutoff=best.cost if best is not None else None)
+                    cost, path = dijkstra.dijkstra(n.g, n.source, n.sink,
+                                                   edge_weight=self._make_edge_weight_func(),
+                                                   cutoff=best.cost if best is not None else None)
 
                     if cost is None:
                         # hit the cutoff
@@ -488,6 +453,11 @@ class Configuration(object):
                 #tqdm.write('best is cost=%r (overall %r)' % (cost, self.compute_cost()))
 
             return self
+
+    def _make_edge_weight_func(self):
+        def fn(v, u, e):
+            return self.edge_weight(v, u, e)
+        return fn
 
     def improve(self):
         improved = True
@@ -517,8 +487,8 @@ class Configuration(object):
                 cutoff = None
                 failed = False
                 for n in tqdm(order, desc='pass %d' % i):
-                    cost, path = cfg.dijkstra(
-                        n.g, n.source, n.sink, cutoff=cutoff)
+                    cost, path = dijkstra.dijkstra(
+                        n.g, n.source, n.sink, edge_weight=cfg._make_edge_weight_func(), cutoff=cutoff)
                     if cost is None:
                         # It's not possible to yield a better result
                         # than the best we already have

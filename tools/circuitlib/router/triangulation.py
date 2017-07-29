@@ -28,7 +28,11 @@ class Triangulation(object):
     def copy(self):
         return Triangulation(self)
 
-    def triangulate(self):
+    def triangulate(self, node_maker=None):
+        if node_maker is None:
+            def node_maker(pt):
+                return types.Branch(pt)
+
         with tqdm(desc='triangulating') as pbar:
             g = networkx.Graph()
 
@@ -44,23 +48,24 @@ class Triangulation(object):
 
                     node_a = self._coord_to_node.get((v1.x, v1.y))
                     if not node_a:
-                        node_a = types.Branch(Point(v1.x, v1.y))
+                        node_a = node_maker(Point(v1.x, v1.y))
                     node_b = self._coord_to_node.get((v2.x, v2.y))
                     if not node_b:
-                        node_b = types.Branch(Point(v2.x, v2.y))
+                        node_b = node_maker(Point(v2.x, v2.y))
 
                     g.add_node(node_a)
                     g.add_node(node_b)
 
-                    g.add_edge(node_a, node_b)
+                    g.add_edge(node_a, node_b, weight=node_a.shape.centroid.distance(
+                        node_b.shape.centroid))
 
         tqdm.write('Triangulated graph with %d nodes and %d edges' %
                    (len(g), g.size()))
         return g
 
     def add_2net(self, a, b):
-        a_pos = (a.node.shape.centroid.x, a.node.shape.centroid.y)
-        b_pos = (b.node.shape.centroid.x, b.node.shape.centroid.y)
+        a_pos = (a.shape.centroid.x, a.shape.centroid.y)
+        b_pos = (b.shape.centroid.x, b.shape.centroid.y)
         if a_pos == b_pos:
             raise ValueError('terminals have the same location')
         self._coord_to_node[a_pos] = a
@@ -94,8 +99,9 @@ class Triangulation(object):
                 bnode = types.Obstacle(
                     getattr(node, 'layer', None), point, 'Edge')
             else:
-                bnode = types.Branch(point, getattr(
-                    node, 'layer', None), proxy_for=node)
+                bnode = types.Branch(point, net=node.net,
+                                     layer=getattr(node, 'layer', None),
+                                     proxy_for=node)
             point = (point.x, point.y)
             self._coord_to_node[point] = bnode
             poly.append(point)

@@ -10,6 +10,7 @@ class Connectable(object):
     ''' Common properties for nodes that can be connected '''
     shape = None
     movable = True
+    net = None
 
     def is_on_layer(self, layername):
         return False
@@ -19,7 +20,9 @@ class ThruHole(Connectable):
     ''' A pad that is present on both layers '''
     movable = False
 
-    def __init__(self, pin):
+    def __init__(self, pin, net):
+        assert net is not None
+        self.net = net
         self.shape = pin.component.pad(pin.num)
         self.layers = [FRONT, BACK]
 
@@ -27,32 +30,37 @@ class ThruHole(Connectable):
         return True
 
     def __str__(self):
-        return 'ThruHole at %r' % (
-            tuple(self.shape.centroid.coords))
+        return 'ThruHole at %r net=%s' % (
+            tuple(self.shape.centroid.coords),
+            self.net)
 
 
 class SmdPad(Connectable):
     ''' A pad that is present on a single layer '''
     movable = False
 
-    def __init__(self, pin, pad):
+    def __init__(self, pin, pad, net):
+        assert net is not None
         self.shape = pin.component.pad(pin.num)
         self.layers = [FRONT if FRONT in pad.layers else BACK]
+        self.net = net
 
     def is_on_layer(self, layer):
         return self.layers[0] == layer
 
     def __str__(self):
-        return 'SmdPad on %s at %r' % (
+        return 'SmdPad on %s at %r net=%s' % (
             self.layers[0],
-            tuple(self.shape.centroid.coords))
+            tuple(self.shape.centroid.coords),
+            self.net)
 
 
 class Branch(Connectable):
     ''' A point on a layer that connects to multiple points.
         There is no pad associated with it '''
 
-    def __init__(self, shape, layer=None, proxy_for=None):
+    def __init__(self, shape=None, net=None, layer=None, proxy_for=None):
+        self.net = net
         self.shape = shape.centroid.buffer(TRACK_RADIUS)
         self.proxy_for = proxy_for
         if layer:
@@ -68,9 +76,10 @@ class Branch(Connectable):
     def __str__(self):
         if self.proxy_for:
             return 'Branch on %s proxy for %s' % (self.layers, str(self.proxy_for))
-        return 'Branch on %s at %r' % (
+        return 'Branch on %s at %r net=%s' % (
             self.layers,
-            tuple(self.shape.centroid.coords))
+            tuple(self.shape.centroid.coords),
+            self.net)
 
 
 class Via(Connectable):
@@ -107,6 +116,7 @@ class TwoNet(object):
         We use this as the basic routable unit '''
 
     def __init__(self, net, a, b):
+        assert net is not None
         self.net = net
         self.a = a
         self.b = b

@@ -191,7 +191,7 @@ def kruskal(points):
     return MST
 
 
-def rectilinear_steiner_minimum_spanning_tree(list_of_nodes):
+def rectilinear_steiner_minimum_spanning_tree(list_of_nodes, net=None):
     steiner_points = []
 
     points = [Point(n.shape.centroid.x, n.shape.centroid.y, n)
@@ -235,7 +235,7 @@ def rectilinear_steiner_minimum_spanning_tree(list_of_nodes):
             want to use that node in a graph later on.  This is as simple
             as just assigning the node property to the generated Branch '''
         if pt.node is None:
-            pt.node = types.Branch(sPoint(pt.x, pt.y))
+            pt.node = types.Branch(sPoint(pt.x, pt.y), net=net)
         return pt.node
 
     # unpack the internal representation into something our caller can use

@@ -1175,7 +1175,7 @@ def straight_walk(P, Q):
         # raise ValueError("Unwanted constrained segment collision detected")
 #         if triangle.getEdgeType(side):
 #             raise TopologyViolationError("Unwanted constrained segment collision detected")
-        if t.constrained[side]:
+        if t.constrained[side] and False:
             raise TopologyViolationError(
                 "Unwanted constrained segment collision detected %s %s" % (P, Q))
         t = t.neighbours[side]

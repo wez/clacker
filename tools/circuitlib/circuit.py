@@ -259,9 +259,9 @@ class Circuit(object):
             for pin in net._get_pins():
                 pad = pin.component.find_pad(pin)
                 if pad.type == 'thru_hole':
-                    t = types.ThruHole(pin)
+                    t = types.ThruHole(pin, net)
                 else:
-                    t = types.SmdPad(pin, pad)
+                    t = types.SmdPad(pin, pad, net)
                 g.add_node(t)
                 to_route.add_node(t)
                 pad_to_node[t.shape.wkt] = t
@@ -284,7 +284,7 @@ class Circuit(object):
                 # Prefer the steiner variant of the MST because it generates
                 # a layout that is easier to route than the pure MST.
                 mst = msteinertree.rectilinear_steiner_minimum_spanning_tree(
-                    pins_in_net)
+                    pins_in_net, net=net)
                 two_nets += mst
 
         for part in self._parts:
