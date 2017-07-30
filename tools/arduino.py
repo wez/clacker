@@ -12,7 +12,7 @@ def find_arduino_exe():
 
     candidates = [
         '/Applications/Arduino.app/Contents/MacOS/Arduino', 'arduino', 'self.exe']
-
+    candidates += glob.glob(os.path.join(os.environ['HOME'], 'Downloads') + '/arduino*/arduino')
     path = os.environ['PATH'].split(os.pathsep)
 
     for c in candidates:
@@ -33,12 +33,14 @@ class Arduino(object):
     def __init__(self):
         self.arduino = find_arduino_exe()
 
-        for pattern in ['Arduino', 'Library/Arduino*']:
+        for pattern in ['Arduino', 'Library/Arduino*', '.arduino15']:
             for path in glob.glob(os.path.join(os.environ['HOME'], pattern)):
                 if os.path.exists(path):
                     self.home_arduino = path
                     break
 
+        if not self.home_arduino:
+            raise Exception("did not find arduino!")
         self.prefs = self.load_prefs()
 
     def load_prefs(self):
@@ -63,17 +65,31 @@ class Arduino(object):
             needed to figure out how to compile and flash a project to the
             device '''
 
+        packages = os.path.join(self.home_arduino, 'packages')
+        if not os.path.isdir(packages):
+            packages = None
+
         cmd = [
             os.path.join(self.prefs['runtime.ide.path'], 'arduino-builder'),
             '-dump-prefs',
             '-hardware', os.path.join(
                 self.prefs['runtime.ide.path'], 'hardware'),
-            '-hardware', '%s/packages' % self.home_arduino,
+        ]
+
+        if packages:
+            cmd += ['-hardware', packages]
+
+        cmd += [
             '-tools', os.path.join(self.prefs['runtime.ide.path'],
                                    'tools-builder'),
             '-tools', os.path.join(self.prefs['runtime.ide.path'],
                                    'hardware', 'tools', 'avr'),
-            '-tools', '%s/packages' % self.home_arduino,
+            ]
+
+        if packages:
+            cmd += ['-tools', packages]
+
+        cmd += [
             '-fqbn', fqbn,
             '-built-in-libraries', os.path.join(
                 self.prefs['runtime.ide.path'], 'libraries'),

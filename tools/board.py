@@ -9,6 +9,7 @@ import subprocess
 import shlex
 import time
 import serial
+import sys
 
 from . import arduino
 from . import library
@@ -94,7 +95,10 @@ class HostCompiler(Board):
                 ['gcc', '-g', '-c', '-MMD', '-o', objfile, srcfile] + cppflags)
 
     def link_exe(self, exefile, objfiles):
-        subprocess.check_call(['g++', '-o', exefile] + objfiles)
+        cmd = ['g++', '-o', exefile] + objfiles
+        if sys.platform.startswith('linux'):
+            cmd += ['-pthread']
+        subprocess.check_call(cmd)
         print('OK: %s' % exefile)
 
     def link_lib(self, libfile, objfiles):
@@ -387,6 +391,9 @@ class AVRBoard(Board):
             subprocess.check_call(
                 ['avr-g++'] + cppflags + ['-o', objfile, srcfile])
         else:
+            cppflags = [
+                '-std=gnu11',
+            ] + cppflags
             subprocess.check_call(
                 ['avr-gcc'] + cppflags + ['-o', objfile, srcfile])
 
