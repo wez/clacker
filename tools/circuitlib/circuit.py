@@ -63,6 +63,7 @@ fixup_skidl_logging_post()
 skidl.lib_search_paths[skidl.KICAD] += [
     'kicad/symbols',
     '/Library/Application Support/kicad/library',
+    '/usr/share/kicad/library',
 ]
 
 
