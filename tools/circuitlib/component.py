@@ -35,6 +35,7 @@ class Component(object):
             pos = pad.at
             size = pad.size
             shape = pad.shape
+            drillshape = None
             if shape == 'rect':
                 padshape = box(pos[0] - size[0] / 2,
                                pos[1] - size[0] / 2,
@@ -43,16 +44,21 @@ class Component(object):
             elif shape in ('oval', 'circle'):
                 padshape = scale(Point(*pos).buffer(1),
                                  size[0] / 2, size[1] / 2)
+                if pad.drill and isinstance(pad.drill.size, int):
+                    drillshape = scale(Point(*pos).buffer(1),
+                                 pad.drill.size / 2, pad.drill.size / 2)
             else:
                 raise Exception("unhandled pad shape " + str(shape))
 
             if len(pos) > 2:
                 # apply its individual rotation
                 padshape = rotate(padshape, 360 - pos[2], origin=pos[0:2])
+                if drillshape:
+                    drillshape = rotate(drillshape, 360 - pos[2], origin=pos[0:2])
 
             padname = padidx if pad.name in self._pads else pad.name
             self._pads[padname] = padshape
-            self._pads_by_idx[padidx] = (pad, padshape)
+            self._pads_by_idx[padidx] = (pad, padshape, drillshape)
             if self.part:
                 # stitch the pad and the pin together
                 try:

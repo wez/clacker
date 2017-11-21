@@ -127,8 +127,8 @@ class Pcb(targets.Target):
                         tri.add_node(types.Branch(
                             cxlate(p), layer=types.FRONT))
 
-        # g = data['graph'] # router.route(data)
-        g = router.route(data)
+        g = data['graph'] # router.route(data)
+        #g = router.route(data)
 
         doc = circuit.toSVG()
 
@@ -201,8 +201,8 @@ class Pcb(targets.Target):
 
         circuit = circuitlib.Circuit()
         cmcu = circuit.feather()
-        # cmcu.reserve_spi()
-        # cmcu.reserve_i2c()
+        cmcu.reserve_spi()
+        cmcu.reserve_i2c()
         cmcu.set_position(translate(cxlate(shapes['mcu']), 12, 26))
         cmcu.set_rotation(90)
 

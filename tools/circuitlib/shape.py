@@ -8,6 +8,7 @@ from shapely.affinity import (translate, scale, rotate)
 from shapely.validation import explain_validity
 import shapely.wkt
 import math
+from . import circuit as circuitlib
 
 
 def add_geoms(geoms, shape):
@@ -22,16 +23,24 @@ def find_corners(shape):
     ''' return a list of the corner points from a shape
         We skip shallow corners; the idea is that we're locating candidates
         for screw holes '''
-    coords = shape.exterior.coords
-    l = len(coords)
+    coords = shape.simplify(1).exterior.coords
+    # -1 because 0 == nth and we don't want to falsely assume that there
+    # is no distance between those points in the a==0 case below
+    l = len(coords) - 1
     corners = []
     for i in range(0, l):
+
         A = Point(coords[i % l])
         B = Point(coords[(i + 1) % l])
         C = Point(coords[(i + 2) % l])
         c = A.distance(B)
         a = B.distance(C)
         b = C.distance(A)
+
+        if c > 110:
+            # Add support points for long straight sections
+            support = LineString([A, B]).interpolate(c/2)
+            corners.append(support)
 
         if a == 0 or c == 0:
             continue
@@ -44,13 +53,13 @@ def find_corners(shape):
         r = math.acos(v)
         angle = math.degrees(r)
 
-        if angle > 15 and angle < 165:
+        if angle > 15 and angle < 180:
             corners.append(B)
 
     return corners
 
 
-def make_shapes(layout, use_rj45=False):
+def make_shapes(layout, use_rj45=True):
     # First pass to compute some shapes
     cap_holes = []
     for _, cluster in layout.key_clusters().items():
@@ -62,7 +71,9 @@ def make_shapes(layout, use_rj45=False):
             # intersection for keys that are very close to each other.
             # Add a little extra room to minimize the chances that the
             # keycaps will touch the case/plate edging.
-            hull.append(key_poly.buffer(2))
+            hull.append(key_poly.buffer(2,
+                                        cap_style=CAP_STYLE.square,
+                                        join_style=JOIN_STYLE.mitre))
 
         # compute the outline of the keycaps; this is for the topmost plate
         hull = unary_union(MultiPolygon(hull))
@@ -111,10 +122,10 @@ def make_shapes(layout, use_rj45=False):
                                            join_style=JOIN_STYLE.mitre)]).convex_hull
 
     if use_rj45:
-        rj45 = find_space(overall_hull, unary_union(
-            [cap_holes, mcu]), box(0, 0, 18, 18))
+        rj45 = translate(box(0, 0, 33, 23), 25, 0)
+        rj45_hull = translate(box(0, 0, 35, 23), 25, 0)
         overall_hull = unary_union([overall_hull,
-                                    rj45.buffer(1,
+                                    rj45_hull.buffer(1,
                                                 cap_style=CAP_STYLE.square,
                                                 join_style=JOIN_STYLE.mitre)]).convex_hull
     else:
@@ -133,6 +144,7 @@ def make_shapes(layout, use_rj45=False):
     for c in corner_points:
         corner_dot = c.buffer(CASE_HOLE_SIZE / 2)
         corner_holes.append(corner_dot)
+
     corner_holes = MultiPolygon(corner_holes)
 
     # and take us out the remaining padding, this time we'll round the corners
@@ -147,6 +159,27 @@ def make_shapes(layout, use_rj45=False):
     mcu = translate(mcu, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
     if rj45:
         rj45 = translate(rj45, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
+
+    mounting_holes = []
+    # mounting holes for the mcu
+    circuit = circuitlib.Circuit()
+    feather = circuit.feather()
+    # feather origin is at its center
+    feather.set_position(translate(mcu, 11.5, 26))
+    feather.set_rotation(90)
+    for _, (pad, padshape, drillshape) in feather._pads_by_idx.items():
+        if pad.name == "" and drillshape:
+            mounting_holes.append(feather.transform(drillshape))
+
+    # mounting holes for the rj45
+    if use_rj45:
+        jack = circuit.rj45_magjack()
+        jack.set_position(rj45)
+        for _, (pad, padshape, drillshape) in jack._pads_by_idx.items():
+            if pad.name == "Hole" and drillshape:
+                mounting_holes.append(jack.transform(drillshape))
+
+    mounting_holes = MultiPolygon(mounting_holes)
 
     top_plate_no_corner_holes = bottom_plate.symmetric_difference(cap_holes)
     top_plate = top_plate_no_corner_holes.symmetric_difference(corner_holes)
@@ -166,6 +199,7 @@ def make_shapes(layout, use_rj45=False):
         'corner_points': corner_points,
         'switch_plate': switch_plate,
         'switch_holes': switch_holes,
+        'mounting_holes': mounting_holes,
         'mcu': mcu,
         'rj45': rj45,
     }

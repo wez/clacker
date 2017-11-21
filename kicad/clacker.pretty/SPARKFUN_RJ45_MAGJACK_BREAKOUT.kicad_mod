@@ -1,0 +1,8 @@
+ (module SPARKFUN_RJ45_MAGJACK (layer F.Cu) (tedit 0) 
+    (pad Hole np_thru_hole circle (at 2.54 2.54) (size 3.302 3.302) (drill 3.302) (layers *.Cu *.Mask F.SilkS))
+    (pad Hole np_thru_hole circle (at 30.48 2.54) (size 3.302 3.302) (drill 3.302) (layers *.Cu *.Mask F.SilkS))
+    (fp_line (start 0 22.86) (end 0 0) (layer F.SilkS) (width 0.2032))
+    (fp_line (start 0 0) (end 33.02 0) (layer F.SilkS) (width 0.2032))
+    (fp_line (start 33.02 0) (end 33.02 22.86) (layer F.SilkS) (width 0.2032))
+    (fp_line (start 33.02 22.86) (end 0 22.86) (layer F.SilkS) (width 0.2032))
+  )

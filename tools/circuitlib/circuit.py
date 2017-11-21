@@ -186,7 +186,7 @@ class Circuit(object):
     def feather(self):
         return self.part('MiscellaneousDevices',
                          'ADAFRUIT_FEATHER',
-                         'clacker:ADAFRUIT_FEATHER_NO_MOUNTING_HOLES',
+                         'clacker:ADAFRUIT_FEATHER',
                          cls=component.Feather)
 
     def keyswitch(self):
@@ -198,6 +198,11 @@ class Circuit(object):
         return self.part('conn',
                          'RJ45',
                          'Connectors:RJ45_8')
+
+    def rj45_magjack(self):
+        return self.part('conn',
+                         'RJ45',
+                         'clacker:SPARKFUN_RJ45_MAGJACK_BREAKOUT')
 
     def teensy(self):
         return self.part('teensy',
@@ -289,7 +294,7 @@ class Circuit(object):
                 two_nets += mst
 
         for part in self._parts:
-            for pad, shape in part._pads_by_idx.values():
+            for pad, shape, drillshape in part._pads_by_idx.values():
                 if not part.find_pad_by_name(pad.name):
                     # Was elided
                     continue
