@@ -27,9 +27,10 @@ import pycircuit
 
 
 class Pcb(targets.Target):
-    def __init__(self, name, layout):
+    def __init__(self, name, layout, surface_mount=False):
         super(Pcb, self).__init__(name)
         self.layout = layout
+        self.surface_mount = surface_mount
 
     def build(self):
         print('Gen PCB %s' % self.full_name)
@@ -46,61 +47,6 @@ class Pcb(targets.Target):
             layout, outputs)
         circuit = self.gen_schematic(layout, shapes, outputs, physical_matrix)
         self.route(circuit, shapes, outputs)
-        #self.gen_pycircuit(layout, shapes, outputs, physical_matrix)
-
-    def gen_pycircuit(self, layout, shapes, outputs, matrix):
-        from pycircuit.circuit import (circuit, Node, Net, Ref, Sub)
-        from pycircuit.export import (
-            pcb_to_kicad, export_circuit_to_graphviz, export_pcb_to_svg)
-        from pycircuit.pcb import (Pcb)
-
-        def define_devices():
-            from pycircuit.device import (Device, Pin)
-            from pycircuit.package import (Package, RectCrtyd, TwoPads, Pad)
-            from pycircuit.footprint import (Footprint, Map)
-            import pycircuit.library
-
-            Device('SW', Pin('1'), Pin('2'))
-            #Device('D', Pin('A'), Pin('C'))
-            Package('CHERRYMX', RectCrtyd(14, 14), TwoPads(10))
-            Footprint('CHERRYMX', 'SW', 'CHERRYMX',
-                      Map(1, '1'),
-                      Map(2, '2'))
-            Footprint('D0805', 'D', '0805', Map(1, 'A'), Map(2, 'K'))
-
-        @circuit('SWITCH')
-        def switch():
-            n = Node('SW', 'SW')
-            n.set_footprint('CHERRYMX')
-            d = Node('D', 'D')
-            d.set_footprint('D0805')
-            Net('COL') + Ref('SW')['1']
-            Ref('D')['A'] + Ref('SW')['2']
-            Net('ROW') + Ref('D')['K']
-
-        define_devices()
-
-        @circuit('MATRIX')
-        def matrix_circuit():
-            for y, x, k in tqdm(list(matrix.keys()), desc='key schematic', unit='keys'):
-                sub = switch()
-                sub.node_by_name('SW').place(*k.centroid())
-                sub.node_by_name('D').place(*k.centroid())
-                Sub(k.identifier, sub)
-                Net('col%d' % x) + Ref(k.identifier)['COL']
-                Net('row%d' % y) + Ref(k.identifier)['ROW']
-
-        c = matrix_circuit()
-
-        export_circuit_to_graphviz(c, os.path.join(outputs, 'alt'))
-
-        pcb = Pcb(c)
-        export_pcb_to_svg(pcb, os.path.join(outputs, 'alt'))
-
-        if False:
-            kpcb = pcb_to_kicad(pcb)
-            with filesystem.WriteFileIfChanged(os.path.join(outputs, 'alt.kicad_pcb')) as f:
-                f.write(str(kpcb))
 
     def route(self, circuit, shapes, outputs):
         data = circuit.computeRoutingData()
@@ -210,8 +156,6 @@ class Pcb(targets.Target):
         col_nets = [circuit.net('col%d' % n) for n in range(0, num_cols)]
         row_nets = [circuit.net('row%d' % n) for n in range(0, num_rows)]
 
-        surface_mount = True
-
         for y, x, k in tqdm(list(matrix.keys()), desc='key schematic', unit='keys'):
             ident = k.identifier
 
@@ -235,7 +179,7 @@ class Pcb(targets.Target):
 
             diode_pos = rotate(diode_pos, k.rotation_angle, phys)
 
-            cdiode = circuit.diode(surface_mount=surface_mount)
+            cdiode = circuit.diode(surface_mount=self.surface_mount)
             cdiode.set_ident('D' + ident)
             cdiode.set_position(cxlate(diode_pos))
             cdiode.set_rotation(180 + k.rotation_angle)
