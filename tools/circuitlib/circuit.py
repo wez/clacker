@@ -210,6 +210,13 @@ class Circuit(object):
                          'clacker:Teensy_LC',
                          cls=component.Teensy)
 
+    def header(self):
+        return self.part(
+                'conn',
+                'CONN_02x12',
+                'Pin_Headers:Pin_Header_Straight_2x12_Pitch2.54mm',
+                cls=component.Header)
+
     def hole_m3(self):
         ''' the hole is footprint only and doesn't have a part
             for the electrical model '''

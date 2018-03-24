@@ -152,6 +152,8 @@ class Pcb(targets.Target):
             cmcu = circuit.feather()
         elif mcu_type == 'teensy':
             cmcu = circuit.teensy()
+        elif mcu_type == 'header':
+            cmcu = circuit.header()
         else:
             raise Exception('handle mcu %s' % mcu_type)
 
@@ -170,12 +172,16 @@ class Pcb(targets.Target):
 
         if mcu_type == 'feather':
             cmcu.set_position(translate(cxlate(shapes['mcu']), 12, 26))
+            cmcu.set_rotation(90)
         elif mcu_type == 'teensy':
             cmcu.set_position(translate(cxlate(shapes['mcu']), 9, 18))
+            cmcu.set_rotation(90)
             pass
+        elif mcu_type == 'header':
+            cmcu.set_position(translate(cxlate(shapes['mcu']), 20, 120))
+            cmcu.set_rotation(105)
         else:
             raise Exception('handle mcu %s' % mcu_type)
-        cmcu.set_rotation(90)
 
         num_cols, num_rows = matrix.dimensions()
         col_nets = [circuit.net('col%d' % n) for n in range(0, num_cols)]

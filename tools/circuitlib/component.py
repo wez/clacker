@@ -233,3 +233,19 @@ class Teensy(Component):
     def reserve_i2c(self):
         self.part['18_A4_SDA0_Touch'] += self.circuit.net('SDA')
         self.part['19_A5_SCL0_Touch'] += self.circuit.net('SCL')
+
+class Header(Component):
+    def reserve_nets(self):
+        self.part['P1'] += self.circuit.net('3V3')
+        self.part['P3'] += self.circuit.net('3V3')
+        self.part['P2'] += self.circuit.net('GND')
+        self.part['P4'] += self.circuit.net('GND')
+
+    def reserve_spi(self):
+        pass
+
+    def reserve_i2c(self):
+        self.part['P5'] += self.circuit.net('SDA')
+        self.part['P7'] += self.circuit.net('SDL')
+        self.part['P6'] += self.circuit.net('SDA')
+        self.part['P8'] += self.circuit.net('SDL')

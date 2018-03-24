@@ -124,6 +124,9 @@ def make_shapes(layout, shape_config=None):
     elif mcu_type == 'teensy':
         mcu = translate(find_space(
             overall_hull, cap_holes, box(0, 0, 18, 36)), 0, 0)
+    elif mcu_type == 'header':
+        mcu = translate(find_space(
+            overall_hull, cap_holes, box(0, 0, 5, 25)), 0, 0)
     else:
         raise Exception('handle mcu type %s' % mcu_type)
 
