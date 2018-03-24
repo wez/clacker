@@ -59,7 +59,7 @@ def find_corners(shape):
     return corners
 
 
-def make_shapes(layout, use_rj45=True):
+def make_shapes(layout, shape_config=None):
     # First pass to compute some shapes
     cap_holes = []
     for _, cluster in layout.key_clusters().items():
@@ -88,6 +88,11 @@ def make_shapes(layout, use_rj45=True):
     cap_holes = MultiPolygon(cap_holes).buffer(0)
     overall_hull = unary_union(cap_holes).convex_hull
 
+    switch_holes = []
+    for k in layout.keys():
+        add_geoms(switch_holes, k.switch_hole())
+    switch_holes = MultiPolygon(switch_holes).buffer(0)
+
     # Now, we want to find somewhere to place the microcontroller.
     # We can't place it under the keyswitches (unless we want a taller
     # keyboard; we could make this a configuration option), so we take
@@ -112,8 +117,16 @@ def make_shapes(layout, use_rj45=True):
             raise Exception('could not place component')
         return best[1]
 
-    mcu = translate(find_space(
-        overall_hull, cap_holes, box(0, 0, 23, 51)), 0, 0)
+    mcu_type = shape_config.get('mcu', 'feather') if shape_config else 'feather'
+    if mcu_type == 'feather':
+        mcu = translate(find_space(
+            overall_hull, cap_holes, box(0, 0, 23, 51)), 0, 0)
+    elif mcu_type == 'teensy':
+        mcu = translate(find_space(
+            overall_hull, cap_holes, box(0, 0, 18, 36)), 0, 0)
+    else:
+        raise Exception('handle mcu type %s' % mcu_type)
+
     mcu = translate(mcu, 5, 0)  # make some space for easier routing
     # Adjust the hull to fit the mcu
     overall_hull = unary_union([overall_hull,
@@ -121,15 +134,25 @@ def make_shapes(layout, use_rj45=True):
                                            cap_style=CAP_STYLE.square,
                                            join_style=JOIN_STYLE.mitre)]).convex_hull
 
-    if use_rj45:
-        rj45 = translate(box(0, 0, 33, 23), 25, 0)
-        rj45_hull = translate(box(0, 0, 35, 23), 25, 0)
+    rj45_type = shape_config.get('rj45', None) if shape_config else None
+    if rj45_type == 'magjack':
+        rj45_box = box(0, 0, 33, 23)
+    elif rj45_type == 'basic':
+        rj45_box = box(0, 0, 18, 18)
+    elif rj45_type is None:
+        rj45 = None
+    else:
+        raise Exception('handle rj45 type %s' % rj45_type)
+
+    if rj45_type is not None:
+        rj45 = find_space(overall_hull,
+                                    unary_union([switch_holes, mcu]),
+                                    rj45_box, padding=0)
+        rj45_hull = rj45
         overall_hull = unary_union([overall_hull,
                                     rj45_hull.buffer(1,
                                                 cap_style=CAP_STYLE.square,
                                                 join_style=JOIN_STYLE.mitre)]).convex_hull
-    else:
-        rj45 = None
 
     # Locate screw holes at the corners.  We inflate the hull to allow room for
     # mounting material.  We do half of this now so we can locate the screw
@@ -140,7 +163,23 @@ def make_shapes(layout, use_rj45=True):
     overall_hull = overall_hull.buffer((CASE_HOLE_SIZE + HOLE_PADDING) / 2,
                                        cap_style=CAP_STYLE.square,
                                        join_style=JOIN_STYLE.mitre)
+
+    # Ensure that sockets are flush with the edge
+    mcu = translate(mcu, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
+    if rj45:
+        rj45 = translate(rj45, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
+
     corner_points = find_corners(overall_hull)
+    points = []
+    for c in corner_points:
+        corner_dot = c.buffer(CASE_HOLE_SIZE)
+        if corner_dot.intersects(mcu):
+            continue
+        if rj45 and rj45.intersects(corner_dot):
+            continue
+        points.append(c)
+
+    corner_points = points
     for c in corner_points:
         corner_dot = c.buffer(CASE_HOLE_SIZE / 2)
         corner_holes.append(corner_dot)
@@ -155,24 +194,21 @@ def make_shapes(layout, use_rj45=True):
     # maximum footprint for the bottom of the case
     bottom_plate = overall_hull
 
-    # Ensure that sockets are flush with the edge
-    mcu = translate(mcu, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
-    if rj45:
-        rj45 = translate(rj45, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
 
     mounting_holes = []
-    # mounting holes for the mcu
     circuit = circuitlib.Circuit()
-    feather = circuit.feather()
-    # feather origin is at its center
-    feather.set_position(translate(mcu, 11.5, 26))
-    feather.set_rotation(90)
-    for _, (pad, padshape, drillshape) in feather._pads_by_idx.items():
-        if pad.name == "" and drillshape:
-            mounting_holes.append(feather.transform(drillshape))
+    if mcu_type == 'feather':
+        # mounting holes for the mcu
+        feather = circuit.feather()
+        # feather origin is at its center
+        feather.set_position(translate(mcu, 11.5, 26))
+        feather.set_rotation(90)
+        for _, (pad, padshape, drillshape) in feather._pads_by_idx.items():
+            if pad.name == "" and drillshape:
+                mounting_holes.append(feather.transform(drillshape))
 
     # mounting holes for the rj45
-    if use_rj45:
+    if rj45_type == 'magjack':
         jack = circuit.rj45_magjack()
         jack.set_position(rj45)
         for _, (pad, padshape, drillshape) in jack._pads_by_idx.items():
@@ -184,14 +220,11 @@ def make_shapes(layout, use_rj45=True):
     top_plate_no_corner_holes = bottom_plate.symmetric_difference(cap_holes)
     top_plate = top_plate_no_corner_holes.symmetric_difference(corner_holes)
 
-    switch_holes = []
-    for k in layout.keys():
-        add_geoms(switch_holes, k.switch_hole())
-    switch_holes = MultiPolygon(switch_holes).buffer(0)
     switch_plate = cap_holes.symmetric_difference(switch_holes)
 
     return {
         'bounds': bounds,
+        'cap_holes': cap_holes,
         'top_plate': top_plate,
         'top_plate_no_corner_holes': top_plate_no_corner_holes,
         'bottom_plate': bottom_plate,

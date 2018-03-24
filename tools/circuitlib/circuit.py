@@ -228,13 +228,13 @@ class Circuit(object):
             all of the nets have been connected.
             This walks through the model and populates a fresh
             instance of the pcbnew board model '''
-        for net in self.circuit._get_nets():
+        for net in self.circuit.nets:
             if net == self.circuit.NC:
                 continue
             self.pcb.net(net.name)
 
         self.pcb.save(filename + '.kicad_pcb')
-        skidl.generate_netlist(filename + '.net')
+        skidl.generate_netlist(file_=filename + '.net')
 
     def finalize(self):
         self.assign_pins()
@@ -257,12 +257,12 @@ class Circuit(object):
 
         list_of_nets = []
 
-        for net in self.circuit._get_nets():
+        for net in self.circuit.nets:
             if net == self.circuit.NC:
                 continue
             g = networkx.Graph()
             pins_in_net = []
-            for pin in net._get_pins():
+            for pin in net.pins:
                 pad = pin.component.find_pad(pin)
                 if pad.type == 'thru_hole':
                     t = types.ThruHole(pin, net)

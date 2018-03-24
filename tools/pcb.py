@@ -27,10 +27,11 @@ import pycircuit
 
 
 class Pcb(targets.Target):
-    def __init__(self, name, layout, surface_mount=False):
+    def __init__(self, name, layout, surface_mount=False, shape_config=None):
         super(Pcb, self).__init__(name)
         self.layout = layout
         self.surface_mount = surface_mount
+        self.shape_config = shape_config
 
     def build(self):
         print('Gen PCB %s' % self.full_name)
@@ -41,7 +42,7 @@ class Pcb(targets.Target):
                 self.full_name.replace(':', '/')))
         filesystem.mkdir_p(outputs)
         layout = self.layout.layout
-        shapes = shape.make_shapes(layout)
+        shapes = shape.make_shapes(layout, shape_config=self.shape_config)
 
         logical_matrix, physical_matrix = matrix.compute_matrix(
             layout, outputs)
@@ -146,10 +147,34 @@ class Pcb(targets.Target):
                              PCBNEW_SPACING - bounds.bounds[1])
 
         circuit = circuitlib.Circuit()
-        cmcu = circuit.feather()
+        mcu_type = self.shape_config.get('mcu', 'feather') if self.shape_config else 'feather'
+        if mcu_type == 'feather':
+            cmcu = circuit.feather()
+        elif mcu_type == 'teensy':
+            cmcu = circuit.teensy()
+        else:
+            raise Exception('handle mcu %s' % mcu_type)
+
+        rj45_type = self.shape_config.get('rj45', None) if self.shape_config else None
+        if rj45_type == 'basic':
+            rj45 = circuit.rj45()
+            rj45.set_position(translate(cxlate(shapes['rj45']), 5, 14))
+            rj45.set_rotation(0);
+            rj45.flip()
+        elif rj45_type == 'magjack':
+            rj45 = circuit.rj45_magjack()
+            rj45.set_position(translate(cxlate(shapes['rj45']), 0, 0))
+
         cmcu.reserve_spi()
         cmcu.reserve_i2c()
-        cmcu.set_position(translate(cxlate(shapes['mcu']), 12, 26))
+
+        if mcu_type == 'feather':
+            cmcu.set_position(translate(cxlate(shapes['mcu']), 12, 26))
+        elif mcu_type == 'teensy':
+            cmcu.set_position(translate(cxlate(shapes['mcu']), 9, 18))
+            pass
+        else:
+            raise Exception('handle mcu %s' % mcu_type)
         cmcu.set_rotation(90)
 
         num_cols, num_rows = matrix.dimensions()
@@ -195,6 +220,7 @@ class Pcb(targets.Target):
         for n, pt in enumerate(shapes['corner_points']):
             hole = circuit.hole_m3()
             hole.set_position(cxlate(pt))
+            hole.set_ident('CP%d' % n)
 
         # Ground plane.
         pour_area = shapes['bottom_plate'].buffer(0)

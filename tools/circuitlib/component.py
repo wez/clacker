@@ -131,6 +131,9 @@ class Component(object):
     def _apply_position(self):
         self.module.at = kicadpcb.coords(self.position) + [-self.rotation]
 
+    def flip(self):
+        self.module.flip()
+
     def set_rotation(self, angle):
         self.rotation = angle
         self._apply_position()

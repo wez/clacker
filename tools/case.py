@@ -28,9 +28,10 @@ PONOKO_LASER_ENGRAVE_AREA = {
 
 
 class Case(targets.Target):
-    def __init__(self, name, layout):
+    def __init__(self, name, layout, shape_config=None):
         super(Case, self).__init__(name)
         self.layout = layout
+        self.shape_config = shape_config
 
     def build(self):
         print('Gen case %s' % self.full_name)
@@ -41,7 +42,7 @@ class Case(targets.Target):
                 self.full_name.replace(':', '/')))
         filesystem.mkdir_p(outputs)
         layout = self.layout.layout
-        shapes = shape.make_shapes(layout)
+        shapes = shape.make_shapes(layout, shape_config=self.shape_config)
 
         self.case_bottom(shapes, outputs)
         self.case_top(shapes, outputs)
@@ -57,6 +58,10 @@ class Case(targets.Target):
         if shapes['rj45']:
             doc.add(shapes['rj45'], **PONOKO_LASER_ENGRAVE)
         doc.add(shapes['mcu'], **PONOKO_LASER_ENGRAVE)
+
+        # remove me!
+        doc.add(shapes['cap_holes'], **PONOKO_LASER_ENGRAVE)
+        doc.add(shapes['switch_holes'], **PONOKO_LASER_ENGRAVE)
 
         doc.save(os.path.join(outputs, 'case-bottom.svg'))
 
