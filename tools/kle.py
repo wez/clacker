@@ -139,16 +139,31 @@ class Key(object):
         return shapely.affinity.rotate(shape, self.rotation_angle,
                                        origin=(rx, ry))
 
+    def mirrored(self):
+        ''' return a version of this key that is flipped around the origin '''
+        p = self.polygon(unit=1)
+        box = shapely.affinity.scale(p, xfact=-1, origin=(0,0))
+        k = Key()
+        k._cluster = [-self._cluster[0], self._cluster[1]]
+        print(p)
+        print(box)
+        raise Exception('boo')
+
+
+        
 
 class Layout(object):
 
-    def __init__(self, filename):
+    def __init__(self, filename=None):
+        self._keys = []
+        if filename is None:
+            return
+
         with open(filename) as f:
             self._data = json.load(f)
 
         self._meta = self._data[0] if not isinstance(
             self._data[0], list) else {}
-        self._keys = []
 
         current = Key()
         for rowdata in self._data:
@@ -194,3 +209,13 @@ class Layout(object):
                 clusters[cluster] = []
             clusters[cluster].append(k)
         return clusters
+
+    def mirror(self):
+        ''' Generate a horizontally mirrored version of this layout such
+        that a left-handed layout becomes a right-handed layout and vice versa '''
+        result = Layout()
+        result._keys = [k.mirrored() for k in self._keys]
+
+        raise Exception("boo")
+
+        return result

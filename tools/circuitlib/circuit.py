@@ -192,7 +192,7 @@ class Circuit(object):
     def keyswitch(self):
         return self.part('keyboard_parts',
                          '~KEYSW',
-                         'clacker:Mx_Alps_100')
+                         'clacker:Mx_Alps_100_reversible')
 
     def rj45(self):
         return self.part('conn',

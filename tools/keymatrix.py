@@ -113,14 +113,19 @@ class KeyLayout(object):
         we need to build the associated board.
     '''
 
-    def __init__(self, layout):
-        self.layout_filename = os.path.join(projectdir.Dir, layout)
+    def __init__(self, layout_filename=None, mirror_layout=None):
+        self._mirror_layout = mirror_layout
+        if layout_filename:
+            self.layout_filename = os.path.join(projectdir.Dir, layout_filename)
         self._layout = None
 
     @property
     def layout(self):
         if self._layout is None:
-            self._layout = kle.Layout(self.layout_filename)
+            if self._mirror_layout:
+                self._layout = self._mirror_layout.layout.mirror()
+            else:
+                self._layout = kle.Layout(self.layout_filename)
         return self._layout
 
 

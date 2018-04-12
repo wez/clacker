@@ -55,13 +55,12 @@ class Case(targets.Target):
         doc.add(shapes['bottom_plate'].symmetric_difference(shapes['corner_holes']),
                 **PONOKO_LASER_CUT)
         doc.add(shapes['mounting_holes'], **PONOKO_LASER_CUT)
-        if shapes['rj45']:
-            doc.add(shapes['rj45'], **PONOKO_LASER_ENGRAVE)
-        doc.add(shapes['mcu'], **PONOKO_LASER_ENGRAVE)
-
+        #if shapes['rj45']:
+        #    doc.add(shapes['rj45'], **PONOKO_LASER_ENGRAVE)
+        #doc.add(shapes['mcu'], **PONOKO_LASER_ENGRAVE)
         # remove me!
-        doc.add(shapes['cap_holes'], **PONOKO_LASER_ENGRAVE)
-        doc.add(shapes['switch_holes'], **PONOKO_LASER_ENGRAVE)
+        #doc.add(shapes['cap_holes'], **PONOKO_LASER_ENGRAVE)
+        #doc.add(shapes['switch_holes'], **PONOKO_LASER_ENGRAVE)
 
         doc.save(os.path.join(outputs, 'case-bottom.svg'))
 

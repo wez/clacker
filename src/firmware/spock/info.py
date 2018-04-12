@@ -13,3 +13,6 @@ shape_config = {
 
 Pcb(name='left-pcb', layout=left, shape_config=shape_config)
 Case(name='left-case', layout=left, shape_config=shape_config)
+
+#right = KeyLayout(mirror_layout=left)
+#Case(name='right-case', layout=right, shape_config=shape_config)

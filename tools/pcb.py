@@ -200,6 +200,7 @@ class Pcb(targets.Target):
 
             # pin 1 attaches to the column wiring
             csw.part['1'] += col_nets[x]
+            csw.part['1a'] += col_nets[x]
 
             # anti-ghosting diode attaches to pin 2 and joins the row wiring
 
@@ -215,6 +216,7 @@ class Pcb(targets.Target):
             cdiode.set_position(cxlate(diode_pos))
             cdiode.set_rotation(180 + k.rotation_angle)
             csw.part['2'] += cdiode.part['A']  # anode
+            csw.part['2a'] += cdiode.part['A']  # anode
             cdiode.part['K'] += row_nets[y]    # cathode -> row
 
         for y in range(0, num_rows):
