@@ -16,9 +16,6 @@ class Component(object):
         self.footprint = footprint  # the footprint name
         self.module = module  # the pykicad footprint instance
 
-        # Workaround https://github.com/dvc94ch/pykicad/issues/11
-        self.module.model = None
-
         if ref:
             self.set_ident(ref)
 
@@ -56,19 +53,30 @@ class Component(object):
                 if drillshape:
                     drillshape = rotate(drillshape, 360 - pos[2], origin=pos[0:2])
 
-            padname = padidx if pad.name in self._pads else pad.name
-            self._pads[padname] = padshape
             self._pads_by_idx[padidx] = (pad, padshape, drillshape)
             if self.part:
                 # stitch the pad and the pin together
+                pin = None
                 try:
-                    pin = self.part[padname]
-                    # there are a number of HOLE pads that don't
-                    # have corresponing pins, so skip those
-                    if pin:
-                        pin.component = self
+                    pin = self.part[pad.name]
+                    padname = pad.name
                 except KeyError:
                     pass
+
+                if not pin:
+                    try:
+                        pin = self.part[padidx]
+                        padname = padidx
+                    except KeyError:
+                        pass
+
+                # there are a number of HOLE pads that don't
+                # have corresponing pins, so skip those
+                if pin:
+                    pin.component = self
+            else:
+                padname = padidx if pad.name in self._pads else pad.name
+            self._pads[padname] = padshape
 
         if self.part:
             if ref:
@@ -120,15 +128,20 @@ class Component(object):
         if self.part:
             self.part.ref = name
 
+        self.module.set_reference(name)
+
+    def set_value(self, value):
+        self.module.set_value(value)
         for t in self.module.texts:
-            if t.type == 'reference':
-                t.text = name
+            if t.type == 'value':
+                t.hide = False
 
     def set_position(self, point):
         self.position = point
         self._apply_position()
 
     def _apply_position(self):
+        self.module.rotate(-self.rotation)
         self.module.at = kicadpcb.coords(self.position) + [-self.rotation]
 
     def flip(self):
@@ -165,6 +178,9 @@ class Component(object):
         return None
 
     def find_pad(self, pin):
+        for pad in self.module.pads:
+            if pad.name == pin.name:
+                return pad
         for pad in self.module.pads:
             if pad.name == pin.num:
                 return pad
@@ -214,12 +230,12 @@ class Feather(Component):
         self.part['GND'] += self.circuit.net('GND')
         self.part['\+3V3'] += self.circuit.net('3V3')
 
-        for p in ['VBAT', 'EN', 'RST', 'AREF', 'VBUS']:
+        for p in ['VBAT', 'EN', 'RST', 'AREF', 'VBUS', 'DFU']:
             self.part[p] += self.circuit.circuit.NC
 
     def reserve_i2c(self):
-        self.part[27] += self.circuit.net('SCL')
-        self.part[28] += self.circuit.net('SDA')
+        self.part['SCL'] += self.circuit.net('SCL')
+        self.part['SDA'] += self.circuit.net('SDA')
 
 
 class Teensy(Component):
@@ -236,16 +252,38 @@ class Teensy(Component):
 
 class Header(Component):
     def reserve_nets(self):
-        self.part['P1'] += self.circuit.net('3V3')
-        self.part['P3'] += self.circuit.net('3V3')
-        self.part['P2'] += self.circuit.net('GND')
-        self.part['P4'] += self.circuit.net('GND')
+        self.part['1'] += self.circuit.net('3V3')
+        self.part['2'] += self.circuit.net('GND')
+
+    def reserve_spi(self):
+        self.part['5'] += self.circuit.net('MISO')
+        self.part['6'] += self.circuit.net('MOSI')
+        self.part['7'] += self.circuit.net('SCK')
+        self.part['8'] += self.circuit.net('CS')
+
+    def reserve_i2c(self):
+        self.part['3'] += self.circuit.net('SDA')
+        self.part['4'] += self.circuit.net('SDL')
+
+class RJ45(Component):
+    def reserve_nets(self):
+        self.part['1'] += self.circuit.net('3V3')
+        self.part['2'] += self.circuit.net('GND')
 
     def reserve_spi(self):
         pass
 
     def reserve_i2c(self):
-        self.part['P5'] += self.circuit.net('SDA')
-        self.part['P7'] += self.circuit.net('SDL')
-        self.part['P6'] += self.circuit.net('SDA')
-        self.part['P8'] += self.circuit.net('SDL')
+        self.part['3'] += self.circuit.net('SDA')
+        self.part['4'] += self.circuit.net('SDL')
+
+class Expander(Component):
+    def reserve_nets(self):
+        self.part['3V3'] += self.circuit.net('3V3')
+        self.part['GND'] += self.circuit.net('GND')
+        self.part['~INT'] += self.circuit.net('EXP_INT')
+        for p in ['~RST']:
+            self.part[p] += self.circuit.circuit.NC
+
+    def reserve_spi(self):
+        pass

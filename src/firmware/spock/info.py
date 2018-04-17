@@ -7,8 +7,9 @@
 left = KeyLayout('left-keymap.json')
 
 shape_config = {
-        'mcu': 'header',
-#        'rj45': 'basic'
+        'mcu': 'feather',
+        'rj45': 'left+right',
+        'header': True,
 }
 
 Pcb(name='left-pcb', layout=left, shape_config=shape_config)

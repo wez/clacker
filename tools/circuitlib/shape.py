@@ -130,7 +130,7 @@ def make_shapes(layout, shape_config=None):
     else:
         raise Exception('handle mcu type %s' % mcu_type)
 
-    mcu = translate(mcu, 5, 0)  # make some space for easier routing
+    #mcu = translate(mcu, 5, 0)  # make some space for easier routing
     # Adjust the hull to fit the mcu
     overall_hull = unary_union([overall_hull,
                                 mcu.buffer(1,
@@ -141,6 +141,8 @@ def make_shapes(layout, shape_config=None):
     if rj45_type == 'magjack':
         rj45_box = box(0, 0, 33, 23)
     elif rj45_type == 'basic':
+        rj45_box = box(0, 0, 18, 18)
+    elif rj45_type == 'left+right':
         rj45_box = box(0, 0, 18, 18)
     elif rj45_type is None:
         rj45 = None

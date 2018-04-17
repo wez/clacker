@@ -47,7 +47,7 @@ class Pcb(targets.Target):
         logical_matrix, physical_matrix = matrix.compute_matrix(
             layout, outputs)
         circuit = self.gen_schematic(layout, shapes, outputs, physical_matrix)
-        self.route(circuit, shapes, outputs)
+        #self.route(circuit, shapes, outputs)
 
     def route(self, circuit, shapes, outputs):
         data = circuit.computeRoutingData()
@@ -150,19 +150,35 @@ class Pcb(targets.Target):
         mcu_type = self.shape_config.get('mcu', 'feather') if self.shape_config else 'feather'
         if mcu_type == 'feather':
             cmcu = circuit.feather()
+            cmcu.set_value('FEATHER')
         elif mcu_type == 'teensy':
             cmcu = circuit.teensy()
         elif mcu_type == 'header':
             cmcu = circuit.header()
+            header = cmcu
         else:
             raise Exception('handle mcu %s' % mcu_type)
 
+        if self.shape_config.get('header', False):
+            header = circuit.header()
+        else:
+            header = None
+
         rj45_type = self.shape_config.get('rj45', None) if self.shape_config else None
         if rj45_type == 'basic':
-            rj45 = circuit.rj45()
-            rj45.set_position(translate(cxlate(shapes['rj45']), 5, 14))
+            rj45 = circuit.rj45(ref='J1')
+            rj45.set_position(translate(cxlate(shapes['rj45']), 0, 14))
+            rj45.set_rotation(180);
+        elif rj45_type == 'left+right':
+            rj45 = circuit.rj45(ref='J1')
+            rj45.set_position(translate(cxlate(shapes['rj45']), 7.5, 14))
             rj45.set_rotation(0);
             rj45.flip()
+            rj45_right = circuit.rj45(ref='J2')
+            rj45_right.set_position(translate(cxlate(shapes['rj45']), 0, 14))
+            rj45_right.set_rotation(180);
+            rj45.reserve_i2c()
+            rj45_right.reserve_i2c()
         elif rj45_type == 'magjack':
             rj45 = circuit.rj45_magjack()
             rj45.set_position(translate(cxlate(shapes['rj45']), 0, 0))
@@ -173,22 +189,47 @@ class Pcb(targets.Target):
         if mcu_type == 'feather':
             cmcu.set_position(translate(cxlate(shapes['mcu']), 12, 26))
             cmcu.set_rotation(90)
+            cmcu.flip()
         elif mcu_type == 'teensy':
             cmcu.set_position(translate(cxlate(shapes['mcu']), 9, 18))
             cmcu.set_rotation(90)
             pass
         elif mcu_type == 'header':
-            cmcu.set_position(translate(cxlate(shapes['mcu']), 20, 120))
-            cmcu.set_rotation(105)
+            pass
         else:
             raise Exception('handle mcu %s' % mcu_type)
+
+        if header:
+            header.set_position(translate(cxlate(shapes['mcu']), 20, 120))
+            header.set_rotation(105)
+            header.reserve_i2c()
+            header.reserve_spi()
+            # keep an MCU pin for possible future SPI add-on
+            circuit.defer_pin_assignment(circuit.net('CS'), cmcu)
+
+        expander = None
+        if True:
+            expander = circuit.expander()
+            expander.set_position(translate(cxlate(shapes['mcu']), 5, 90))
+            expander.set_rotation(90)
+            expander.set_value('SparkFun SX1509')
+            #expander.set_position(translate(cxlate(shapes['mcu']), 5, 90))
+            #expander.set_rotation(135)
+            expander.reserve_i2c()
+            if rj45:
+                rj45.part['5'] += circuit.net('EXP_INT')
+            if rj45_right:
+                rj45_right.part['5'] += circuit.net('EXP_INT')
+            if header:
+                circuit.defer_pin_assignment(circuit.net('EXP_INT'), header)
+
 
         num_cols, num_rows = matrix.dimensions()
         col_nets = [circuit.net('col%d' % n) for n in range(0, num_cols)]
         row_nets = [circuit.net('row%d' % n) for n in range(0, num_rows)]
 
         for y, x, k in tqdm(list(matrix.keys()), desc='key schematic', unit='keys'):
-            ident = k.identifier
+            ident = '%d%d' % (y, x)  # k.identifier
 
             phys = k.centroid()
             phys = Point(phys[0], phys[1])
@@ -196,7 +237,8 @@ class Pcb(targets.Target):
             csw = circuit.keyswitch()
             csw.set_position(cxlate(phys))
             csw.set_rotation(k.rotation_angle)
-            csw.set_ident(ident)
+            csw.set_ident('SW%s' % ident)
+            csw.set_value('SW%s' % ident)
 
             # pin 1 attaches to the column wiring
             csw.part['1'] += col_nets[x]
@@ -221,9 +263,13 @@ class Pcb(targets.Target):
 
         for y in range(0, num_rows):
             circuit.defer_pin_assignment(row_nets[y], cmcu)
+            if header:
+                circuit.defer_pin_assignment(row_nets[y], header)
 
         for x in range(0, num_cols):
             circuit.defer_pin_assignment(col_nets[x], cmcu)
+            if header:
+                circuit.defer_pin_assignment(col_nets[x], header)
 
         for n, pt in enumerate(shapes['corner_points']):
             hole = circuit.hole_m3()
@@ -233,6 +279,7 @@ class Pcb(targets.Target):
         # Ground plane.
         pour_area = shapes['bottom_plate'].buffer(0)
         circuit.addArea('B.Cu', circuit.net('GND'), cxlate(pour_area))
+        circuit.addArea('F.Cu', circuit.net('GND'), cxlate(pour_area))
 
         circuit.drawShape('Edge.Cuts', cxlate(shapes['bottom_plate']))
 
@@ -253,10 +300,96 @@ class Pcb(targets.Target):
         # mcu pins to the NC net
         # circuit.assign_pins()
 
+        if expander:
+            for no, net in enumerate(row_nets):
+                expander.part[str(no)] += net
+            for no, net in enumerate(col_nets):
+                expander.part[str(no + 8)] += net
+
+        # make sure that those pins get mapped before we tie off all remaining
+        # mcu pins to the NC net
+        # circuit.assign_pins()
+
         # Any remaining pins on the mcu are intentionally left unconnected
         circuit.circuit.NC += cmcu.available_pins()
+
+        logo = circuit.spockl()
+        logo.set_position(translate(Point(54, 157)))
+        logor = circuit.spockr()
+        logor.set_position(translate(Point(54, 157)))
+
         # circuit.circuit.NC += cteensy.available_pins()
         circuit.finalize()
+
+        # Render labels for the nets that are attached to the various
+        # pins that we just emitted
+
+        def oddeven(pin, remainder=0):
+            ''' left or right justification depending on whether the
+                pin number is odd or even.  This is for components
+                where the pin numbers zig-zag '''
+
+            try:
+                pin_num = int(pin.num)
+                return 'right' if pin_num % 2 == remainder else 'left'
+            except ValueError:
+                return 'right'
+
+        def left_right(pin, cutoff):
+            ''' left justify if the pin is < cutoff '''
+            try:
+                pin_num = int(pin.num)
+                return 'right' if pin_num >= cutoff else 'left'
+            except ValueError:
+                return 'right'
+
+        def right_left(pin, cutoff):
+            ''' right justify if the pin is < cutoff '''
+            try:
+                pin_num = int(pin.num)
+                return 'right' if pin_num < cutoff else 'left'
+            except ValueError:
+                return 'right'
+
+        def list_get(list, idx, defval=None):
+            ''' helper for safely accessing a list offset with a default '''
+            return (list[idx:idx+1] or [defval])[0]
+
+        def add_net_labels(component, layer='F.SilkS', mirror=False, rotate=0, numbering=oddeven):
+            ''' label each pad with the associated net '''
+            for pin in component.part.pins:
+                for net in pin.nets:
+                    if net == net.circuit.NC:
+                        continue
+                    pad = component.find_pad(pin)
+
+                    justify = numbering(pin)
+                    if mirror:
+                        justify=('left' if justify == 'right' else 'right', 'mirror')
+
+                    label = '  %s  ' % net.name
+                    at = [pad.at[0], pad.at[1], list_get(pad.at, 2, 0) + rotate]
+
+                    text = circuitlib.kicadpcb.pykicad.module.Text(text=label,
+                            at=at,
+                            layer=layer,
+                            size=[1, 1],
+                            justify=justify,
+                            thickness=0.15)
+                    component.module.texts.append(text)
+
+        if header:
+            add_net_labels(header, 'F.SilkS')
+            add_net_labels(header, 'B.SilkS', mirror=True, numbering=lambda pin: oddeven(pin, remainder=0))
+        add_net_labels(cmcu, 'B.SilkS', mirror=True, rotate=90, numbering=lambda pin: left_right(pin, 17))
+        add_net_labels(cmcu, 'F.SilkS', rotate=90, numbering=lambda pin: right_left(pin, 17))
+        if expander:
+            add_net_labels(expander, 'F.SilkS', rotate=0, numbering=lambda pin: right_left(pin, 8))
+            add_net_labels(expander, 'B.SilkS', mirror=True, rotate=0, numbering=lambda pin: left_right(pin, 8))
+        if rj45:
+            add_net_labels(rj45, 'B.SilkS', mirror=True, rotate=90)
+        if rj45_right:
+            add_net_labels(rj45_right, 'F.SilkS', rotate=90, numbering=lambda pin: oddeven(pin, remainder=1))
 
         circuit.save(os.path.join(outputs, self.name))
 

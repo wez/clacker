@@ -37,7 +37,22 @@ class Pcb(object):
     _cache_dir = 'kicad-deps'
 
     def __init__(self):
-        self.pcb = pykicad.pcb.Pcb()
+        # These are the Seeed DRC parameters
+        netclass = pykicad.pcb.NetClass('Default',
+                    clearance=0.153,
+                    trace_width=0.153,
+                    via_dia=0.6,
+                    via_drill=0.3)
+        setup = pykicad.pcb.Setup(
+                    zone_clearance=0.153,
+                    trace_min=0.153,
+                    segment_width=0.153,
+                    via_size=0.6,
+                    via_min_size=0.6,
+                    via_min_drill=0.3)
+        self.pcb = pykicad.pcb.Pcb(setup=setup,
+                net_classes=[netclass],
+                page_type='A3')
         self._nets = {}
 
     def net(self, name):
@@ -96,6 +111,11 @@ class Pcb(object):
                                       layer=layerName)
         self.pcb.segments.append(segment)
         return segment
+
+    def addText(self, text, position, bold=False, italic=False, thickness=0.15, size=None, justify=None, layer=None):
+        text = pykicad.pcb.Text(text, position, bold=bold, italic=italic, thickness=thickness, size=size, justify=justify, layer=layer or 'F.SilkS')
+        self.pcb.texts.append(text)
+        return text
 
     def addVia(self, position, netName, size=0.6, drill=0.4, layers=['F.Cu', 'B.Cu']):
         via = pykicad.pcb.Via(at=coords(position),

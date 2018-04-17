@@ -77,7 +77,6 @@ class Circuit(object):
     '''
 
     def __init__(self):
-
         self.pcb = kicadpcb.Pcb()
         self.circuit = skidl.Circuit()
 
@@ -140,7 +139,7 @@ class Circuit(object):
                 return hasattr(pin, 'component')
 
             def padshape(pin):
-                return pin.component.pad(pin.num)
+                return pin.component.pad(pin.component.find_pad(pin).name)
 
             def dist_from_comp(pin):
                 return padshape(pin).distance(component.position)
@@ -179,28 +178,31 @@ class Circuit(object):
         self._defer_pins = []
 
     def diode(self, surface_mount=False):
-        return self.part('device',
+        return self.part('Device',
                          'D',
                          'clacker:D_axial' if not surface_mount else 'clacker:D_SOD123')
 
-    def feather(self):
+    def feather(self, ref='U1'):
         return self.part('MiscellaneousDevices',
                          'ADAFRUIT_FEATHER',
-                         'clacker:ADAFRUIT_FEATHER',
-                         cls=component.Feather)
+                         'clacker:ADAFRUIT_FEATHER_NO_MOUNTING_HOLES',
+                         cls=component.Feather,
+                         ref=ref)
 
     def keyswitch(self):
         return self.part('keyboard_parts',
                          '~KEYSW',
                          'clacker:Mx_Alps_100_reversible')
 
-    def rj45(self):
-        return self.part('conn',
+    def rj45(self, ref='RJ45'):
+        return self.part('Connector_Specialized',
                          'RJ45',
-                         'Connectors:RJ45_8')
+                         'Connectors:RJ45_8',
+                         cls=component.RJ45,
+                         ref=ref)
 
     def rj45_magjack(self):
-        return self.part('conn',
+        return self.part('Connector',
                          'RJ45',
                          'clacker:SPARKFUN_RJ45_MAGJACK_BREAKOUT')
 
@@ -210,12 +212,25 @@ class Circuit(object):
                          'clacker:Teensy_LC',
                          cls=component.Teensy)
 
-    def header(self):
+    def expander(self):
+        return self.part('sparkfun',
+                         'SX1509',
+                         'clacker:SPARKFUN_SX1509',
+                         cls=component.Expander)
+
+    def spockl(self):
+        return self.part(None, None, 'clacker:spock')
+
+    def spockr(self):
+        return self.part(None, None, 'clacker:spockr')
+
+    def header(self, ref='J4'):
         return self.part(
-                'conn',
-                'CONN_02x12',
+                'Connector_Generic',
+                'Conn_02x12_Top_Bottom',
                 'Pin_Headers:Pin_Header_Straight_2x12_Pitch2.54mm',
-                cls=component.Header)
+                cls=component.Header,
+                ref=ref)
 
     def hole_m3(self):
         ''' the hole is footprint only and doesn't have a part
@@ -229,6 +244,9 @@ class Circuit(object):
     def addArea(self, layerName, net, shape):
         ''' Create an filled area and attach it to the specified net '''
         self.pcb.addArea(layerName, net.name, shape)
+
+    def text(self, text, at, **kwargs):
+        return self.pcb.addText(text, at, **kwargs)
 
     def save(self, filename):
         ''' called after all of the parts have been placed and
