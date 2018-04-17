@@ -113,7 +113,7 @@ class Pcb(object):
         return segment
 
     def addText(self, text, position, bold=False, italic=False, thickness=0.15, size=None, justify=None, layer=None):
-        text = pykicad.pcb.Text(text, position, bold=bold, italic=italic, thickness=thickness, size=size, justify=justify, layer=layer or 'F.SilkS')
+        text = pykicad.pcb.GrText(text, position, bold=bold, italic=italic, thickness=thickness, size=size, justify=justify, layer=layer or 'F.SilkS')
         self.pcb.texts.append(text)
         return text
 
@@ -126,10 +126,10 @@ class Pcb(object):
         return via
 
     def drawSegment(self, layerName, start, end):
-        segment = pykicad.pcb.Line(start=coords(start),
-                                   end=coords(end),
-                                   width=0.15,
-                                   layer=layerName)
+        segment = pykicad.pcb.GrLine(start=coords(start),
+                                     end=coords(end),
+                                     width=0.15,
+                                     layer=layerName)
         self.pcb.lines.append(segment)
         return segment
 
