@@ -195,7 +195,7 @@ class Circuit(object):
                          'clacker:Mx_Alps_100_reversible')
 
     def rj45(self, ref='RJ45'):
-        return self.part('Connector_Specialized',
+        return self.part('Connector',
                          'RJ45',
                          'Connectors:RJ45_8',
                          cls=component.RJ45,
