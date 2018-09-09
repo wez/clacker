@@ -180,10 +180,10 @@ class Pcb(targets.Target):
             trrs.set_rotation(90);
             trrs.reserve_i2c()
             j1 = circuit.jumper3(ref='JP1')
-            j1.set_position(translate(cxlate(shapes['trrs']), -6, 6.5))
+            j1.set_position(translate(cxlate(shapes['trrs']), -7, 6.5))
             j1.set_rotation(270)
             j2 = circuit.jumper3(ref='JP2')
-            j2.set_position(translate(cxlate(shapes['trrs']), 6, 6.5))
+            j2.set_position(translate(cxlate(shapes['trrs']), 7, 6.5))
             j2.set_rotation(90)
 
             j1.part['1'] += circuit.net('3V3')
