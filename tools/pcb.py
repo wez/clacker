@@ -238,21 +238,25 @@ class Pcb(targets.Target):
             raise Exception('handle mcu %s' % mcu_type)
 
         if header:
-            header.set_position(translate(cxlate(shapes['mcu']), 20, 120))
-            header.set_rotation(105)
+            header_coords = self.shape_config.get('header_coords', (20, 120, 105))
+            header.set_position(Point(header_coords[0], header_coords[1]))
+            header.set_rotation(header_coords[2])
             header.reserve_i2c()
             header.reserve_spi()
             # keep an MCU pin for possible future SPI add-on
             circuit.defer_pin_assignment(circuit.net('CS'), cmcu)
 
         expander = None
-        if True:
+        if self.shape_config.get('expander', True):
+            expander_coords = self.shape_config.get('expander_coords', (5, 90, 90))
+            expander_rotation = expander_coords[2]
             expander = circuit.expander()
-            expander.set_position(translate(cxlate(shapes['mcu']), 5, 90))
-            expander.set_rotation(90)
             expander.set_value('SparkFun SX1509')
-            #expander.set_position(translate(cxlate(shapes['mcu']), 5, 90))
-            #expander.set_rotation(135)
+            expander.set_ident('U2')
+            expander.set_position(Point(expander_coords[0],
+                                        expander_coords[1]))
+            print('set rotation', expander_rotation)
+            expander.set_rotation(expander_rotation)
             expander.reserve_i2c()
             if rj45:
                 rj45.part['5'] += circuit.net('EXP_INT')
@@ -351,10 +355,12 @@ class Pcb(targets.Target):
         # Any remaining pins on the mcu are intentionally left unconnected
         circuit.circuit.NC += cmcu.available_pins()
 
+        logo_coords = Point(self.shape_config.get('logo_coords', (54, 157)))
+
         logo = circuit.spockl()
-        logo.set_position(translate(Point(54, 157)))
+        logo.set_position(translate(logo_coords))
         logor = circuit.spockr()
-        logor.set_position(translate(Point(54, 157)))
+        logor.set_position(translate(logo_coords))
 
         # circuit.circuit.NC += cteensy.available_pins()
         circuit.finalize()

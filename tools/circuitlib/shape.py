@@ -119,16 +119,21 @@ def make_shapes(layout, shape_config=None):
 
     mcu_type = shape_config.get('mcu', 'feather') if shape_config else 'feather'
     if mcu_type == 'feather':
-        mcu = translate(find_space(
-            overall_hull, cap_holes, box(0, 0, 23, 51)), 0, 0)
+        mcu_dims = (23, 51)
     elif mcu_type == 'teensy':
-        mcu = translate(find_space(
-            overall_hull, cap_holes, box(0, 0, 18, 36)), 0, 0)
+        mcu_dims = (18, 36)
     elif mcu_type == 'header':
-        mcu = translate(find_space(
-            overall_hull, cap_holes, box(0, 0, 5, 25)), 0, 0)
+        mcu_dims = (5, 25)
     else:
         raise Exception('handle mcu type %s' % mcu_type)
+
+    mcu_coords = shape_config.get('mcu_coords', None)
+    if mcu_coords is None:
+        mcu = translate(find_space(
+            overall_hull, cap_holes,
+            box(0, 0, mcu_dims[0], mcu_dims[1])), 0, 0)
+    else:
+        mcu = box(mcu_coords[0], mcu_coords[1], mcu_dims[0], mcu_dims[1])
 
     #mcu = translate(mcu, 5, 0)  # make some space for easier routing
     # Adjust the hull to fit the mcu
@@ -141,7 +146,7 @@ def make_shapes(layout, shape_config=None):
     if trrs_type == 'basic':
         trrs_box = box(0, 0, 10, 11)
     elif trrs_type == 'left+right':
-        trrs_box = box(0, 0, 10, 11)
+        trrs_box = box(0, 0, 15, 12)
     elif trrs_type is None:
         trrs = None
     else:

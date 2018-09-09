@@ -115,4 +115,8 @@
     (solder_mask_margin 0.1016))
   (pad ~INT thru_hole circle (at -16.509705 -2.54) (size 1.8796 1.8796) (drill 1.016) (layers *.Cu *.Mask)
     (solder_mask_margin 0.1016))
+  (fp_line (start -19 3) (end 19 3) (layer F.SilkS) (width 0.127))
+  (fp_line (start -19 3) (end -19 -20) (layer F.SilkS) (width 0.127))
+  (fp_line (start -19 -20) (end 19 -20) (layer F.SilkS) (width 0.127))
+  (fp_line (start 19 -20) (end 19 3) (layer F.SilkS) (width 0.127))
 )
