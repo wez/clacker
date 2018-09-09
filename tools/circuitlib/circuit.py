@@ -159,16 +159,16 @@ class Circuit(object):
             def dist_from_net_pin(pin):
                 return padshape(pin).centroid.distance(net_shape)
 
-            pins = filter(has_pad, sorted(filter(has_pad,
+            pins = list(filter(has_pad, sorted(filter(has_pad,
                                                  component.available_pins()),
                                           key=dist_from_net_pin,
-                                          reverse=False))
+                                          reverse=False)))
 
-            if not pins:
+            if not pins or len(pins) == 0:
                 raise Exception("no more pins are available on %s" % component)
 
             # this is the best available pin on the component
-            comp_pin = list(pins)[0]
+            comp_pin = pins[0]
 
             # Connect the net to the best available pin
             net_pin += comp_pin

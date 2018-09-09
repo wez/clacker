@@ -227,10 +227,11 @@ class Component(object):
 
 class Feather(Component):
     def reserve_nets(self):
-        self.part['GND'] += self.circuit.net('GND')
+        for n in ['GND', 'VBAT', 'VBUS']:
+            self.part[n] += self.circuit.net(n)
         self.part['\+3V3'] += self.circuit.net('3V3')
 
-        for p in ['VBAT', 'EN', 'RST', 'AREF', 'VBUS', 'DFU']:
+        for p in ['EN', 'RST', 'AREF', 'DFU']:
             self.part[p] += self.circuit.circuit.NC
 
     def reserve_i2c(self):
@@ -306,7 +307,7 @@ class Expander(Component):
     def reserve_nets(self):
         self.part['3V3'] += self.circuit.net('3V3')
         self.part['GND'] += self.circuit.net('GND')
-        self.part['~INT'] += self.circuit.net('EXP_INT')
+        self.part['~INT'] += self.circuit.net('~INT')
         for p in ['~RST']:
             self.part[p] += self.circuit.circuit.NC
 

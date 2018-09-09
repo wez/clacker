@@ -159,6 +159,9 @@ class Pcb(targets.Target):
         else:
             raise Exception('handle mcu %s' % mcu_type)
 
+        for pin in self.shape_config.get('reserve_pins', {}).get('mcu', []):
+            cmcu.part[pin] += circuit.net(pin)
+
         if self.shape_config.get('header', False):
             header = circuit.header()
         else:
@@ -180,11 +183,10 @@ class Pcb(targets.Target):
             trrs.set_rotation(90);
             trrs.reserve_i2c()
             j1 = circuit.jumper3(ref='JP1')
-            j1.set_position(translate(cxlate(shapes['trrs']), -7, 6.5))
-            j1.set_rotation(270)
+            j1.set_position(translate(cxlate(shapes['trrs']), 9, 3))
             j2 = circuit.jumper3(ref='JP2')
-            j2.set_position(translate(cxlate(shapes['trrs']), 7, 6.5))
-            j2.set_rotation(90)
+            j2.set_position(translate(cxlate(shapes['trrs']), 9, 9.5))
+            j2.set_rotation(180)
 
             j1.part['1'] += circuit.net('3V3')
             j1.part['2'] += trrs.part['R2']
@@ -245,6 +247,11 @@ class Pcb(targets.Target):
             header.reserve_spi()
             # keep an MCU pin for possible future SPI add-on
             circuit.defer_pin_assignment(circuit.net('CS'), cmcu)
+            # bring out other supply levels
+            for n in ['VBAT', 'VBUS']:
+                circuit.defer_pin_assignment(circuit.net(n), header)
+            for pin in self.shape_config.get('reserve_pins', {}).get('mcu', []):
+                circuit.defer_pin_assignment(circuit.net(pin), header)
 
         expander = None
         if self.shape_config.get('expander', True):
@@ -253,18 +260,20 @@ class Pcb(targets.Target):
             expander = circuit.expander()
             expander.set_value('SparkFun SX1509')
             expander.set_ident('U2')
+            expander.flip()
             expander.set_position(Point(expander_coords[0],
                                         expander_coords[1]))
-            print('set rotation', expander_rotation)
             expander.set_rotation(expander_rotation)
             expander.reserve_i2c()
-            if rj45:
-                rj45.part['5'] += circuit.net('EXP_INT')
-            if rj45_right:
-                rj45_right.part['5'] += circuit.net('EXP_INT')
-            if header:
-                circuit.defer_pin_assignment(circuit.net('EXP_INT'), header)
-                circuit.defer_pin_assignment(circuit.net('EXP_INT'), cmcu)
+
+        if rj45:
+            rj45.part['5'] += circuit.net('~INT')
+        if rj45_right:
+            rj45_right.part['5'] += circuit.net('~INT')
+        if header:
+            circuit.defer_pin_assignment(circuit.net('~INT'), header)
+        if rj45 or rj45_right or header:
+            circuit.defer_pin_assignment(circuit.net('~INT'), cmcu)
 
 
         num_cols, num_rows = matrix.dimensions()
@@ -400,13 +409,19 @@ class Pcb(targets.Target):
             ''' helper for safely accessing a list offset with a default '''
             return (list[idx:idx+1] or [defval])[0]
 
-        def add_net_labels(component, layer='F.SilkS', mirror=False, rotate=0, numbering=oddeven):
+        def add_net_labels(component, layer='F.SilkS', mirror=False, rotate=0,
+                           size=0.8, numbering=oddeven):
             ''' label each pad with the associated net '''
             for pin in component.part.pins:
                 for net in pin.nets:
                     if net == net.circuit.NC or '$' in net.name:
                         continue
                     pad = component.find_pad(pin)
+
+                    if pad.name == pin.name and pin.name == net.name:
+                        # if the pin is already labelled, don't add another with
+                        # the same text
+                        continue
 
                     justify = numbering(pin)
                     if mirror:
@@ -418,7 +433,7 @@ class Pcb(targets.Target):
                     text = circuitlib.kicadpcb.pykicad.module.Text(text=label,
                             at=at,
                             layer=layer,
-                            size=[1, 1],
+                            size=[size, size],
                             justify=justify,
                             thickness=0.15)
                     component.module.texts.append(text)
@@ -426,24 +441,33 @@ class Pcb(targets.Target):
         if header:
             add_net_labels(header, 'F.SilkS', rotate=30)
             add_net_labels(header, 'B.SilkS', rotate=30,
-                           mirror=True, numbering=lambda pin: oddeven(pin, remainder=0))
-        add_net_labels(cmcu, 'B.SilkS', mirror=True, rotate=90, numbering=lambda pin: left_right(pin, 17))
-        add_net_labels(cmcu, 'F.SilkS', rotate=90, numbering=lambda pin: right_left(pin, 17))
+                           mirror=True,
+                           numbering=lambda pin: oddeven(pin, remainder=0))
+        add_net_labels(cmcu, 'B.SilkS', mirror=True, rotate=90,
+                       numbering=lambda pin: right_left(pin, 17))
+        add_net_labels(cmcu, 'F.SilkS', rotate=90,
+                       numbering=lambda pin: right_left(pin, 17))
         if expander:
-            add_net_labels(expander, 'F.SilkS', rotate=0, numbering=lambda pin: right_left(pin, 8))
-            add_net_labels(expander, 'B.SilkS', mirror=True, rotate=0, numbering=lambda pin: left_right(pin, 8))
+            add_net_labels(expander, 'F.SilkS', rotate=0,
+                           numbering=lambda pin: right_left(pin, 8))
+            add_net_labels(expander, 'B.SilkS', mirror=True, rotate=30,
+                           numbering=lambda pin: right_left(pin, 8))
         if rj45:
             add_net_labels(rj45, 'B.SilkS', mirror=True, rotate=90)
         if rj45_right:
-            add_net_labels(rj45_right, 'F.SilkS', rotate=90, numbering=lambda pin: oddeven(pin, remainder=1))
+            add_net_labels(rj45_right, 'F.SilkS', rotate=90,
+                           numbering=lambda pin: oddeven(pin, remainder=1))
         if trrs:
             add_net_labels(trrs, 'B.SilkS', mirror=True, rotate=180)
-            add_net_labels(trrs, 'F.SilkS', rotate=180, numbering=lambda pin: oddeven(pin, remainder=1))
+            add_net_labels(trrs, 'F.SilkS', rotate=180,
+                           numbering=lambda pin: oddeven(pin, remainder=1))
 
         if j1:
-            add_net_labels(j1, 'F.SilkS', rotate=90, numbering=lambda pin: oddeven(pin, remainder=1))
+            add_net_labels(j1, 'F.SilkS', rotate=90, size=0.6,
+                           numbering=lambda pin: oddeven(pin, remainder=1))
         if j2:
-            add_net_labels(j2, 'F.SilkS', rotate=90)
+            add_net_labels(j2, 'F.SilkS', rotate=90, size=0.6,
+                           numbering=lambda pin: oddeven(pin, remainder=1))
 
         circuit.save(os.path.join(outputs, self.name))
 
