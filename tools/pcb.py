@@ -164,13 +164,16 @@ class Pcb(targets.Target):
         else:
             header = None
 
+        j1 = None
+        j2 = None
+
         trrs_type = self.shape_config.get('trrs', None) if self.shape_config else None
         if trrs_type == 'basic':
             trrs = circuit.trrs(ref='J1')
+            trrs.set_ident('J1')
             trrs.set_position(translate(cxlate(shapes['trrs']), 0, 5.5))
             trrs.set_rotation(90);
             trrs.reserve_i2c()
-            trrs_right = None
         elif trrs_type == 'left+right':
             trrs = circuit.trrs(ref='J1', dual=True)
             trrs.set_position(translate(cxlate(shapes['trrs']), 0, 5.5))
@@ -178,7 +181,7 @@ class Pcb(targets.Target):
             trrs.reserve_i2c()
             j1 = circuit.jumper3(ref='JP1')
             j1.set_position(translate(cxlate(shapes['trrs']), -6, 6.5))
-            j1.set_rotation(90)
+            j1.set_rotation(270)
             j2 = circuit.jumper3(ref='JP2')
             j2.set_position(translate(cxlate(shapes['trrs']), 6, 6.5))
             j2.set_rotation(90)
@@ -190,10 +193,8 @@ class Pcb(targets.Target):
             j2.part['1'] += circuit.net('GND')
             j2.part['2'] += trrs.part['S']
             j2.part['3'] += circuit.net('3V3')
-            trrs_right = None
         else:
             trrs = None
-            trrs_right = None
 
         rj45_type = self.shape_config.get('rj45', None) if self.shape_config else None
         if rj45_type == 'basic':
@@ -227,7 +228,6 @@ class Pcb(targets.Target):
         if mcu_type == 'feather':
             cmcu.set_position(translate(cxlate(shapes['mcu']), 12, 26))
             cmcu.set_rotation(90)
-            cmcu.flip()
         elif mcu_type == 'teensy':
             cmcu.set_position(translate(cxlate(shapes['mcu']), 9, 18))
             cmcu.set_rotation(90)
@@ -264,6 +264,7 @@ class Pcb(targets.Target):
                 rj45_right.part['5'] += circuit.net('EXP_INT')
             if header:
                 circuit.defer_pin_assignment(circuit.net('EXP_INT'), header)
+                circuit.defer_pin_assignment(circuit.net('EXP_INT'), cmcu)
 
 
         num_cols, num_rows = matrix.dimensions()
@@ -403,7 +404,7 @@ class Pcb(targets.Target):
             ''' label each pad with the associated net '''
             for pin in component.part.pins:
                 for net in pin.nets:
-                    if net == net.circuit.NC:
+                    if net == net.circuit.NC or '$' in net.name:
                         continue
                     pad = component.find_pad(pin)
 
@@ -423,8 +424,9 @@ class Pcb(targets.Target):
                     component.module.texts.append(text)
 
         if header:
-            add_net_labels(header, 'F.SilkS')
-            add_net_labels(header, 'B.SilkS', mirror=True, numbering=lambda pin: oddeven(pin, remainder=0))
+            add_net_labels(header, 'F.SilkS', rotate=30)
+            add_net_labels(header, 'B.SilkS', rotate=30,
+                           mirror=True, numbering=lambda pin: oddeven(pin, remainder=0))
         add_net_labels(cmcu, 'B.SilkS', mirror=True, rotate=90, numbering=lambda pin: left_right(pin, 17))
         add_net_labels(cmcu, 'F.SilkS', rotate=90, numbering=lambda pin: right_left(pin, 17))
         if expander:
@@ -435,9 +437,13 @@ class Pcb(targets.Target):
         if rj45_right:
             add_net_labels(rj45_right, 'F.SilkS', rotate=90, numbering=lambda pin: oddeven(pin, remainder=1))
         if trrs:
-            add_net_labels(trrs, 'B.SilkS', mirror=True, rotate=90)
-        if trrs_right:
-            add_net_labels(trrs_right, 'F.SilkS', rotate=90, numbering=lambda pin: oddeven(pin, remainder=1))
+            add_net_labels(trrs, 'B.SilkS', mirror=True, rotate=180)
+            add_net_labels(trrs, 'F.SilkS', rotate=180, numbering=lambda pin: oddeven(pin, remainder=1))
+
+        if j1:
+            add_net_labels(j1, 'F.SilkS', rotate=90, numbering=lambda pin: oddeven(pin, remainder=1))
+        if j2:
+            add_net_labels(j2, 'F.SilkS', rotate=90)
 
         circuit.save(os.path.join(outputs, self.name))
 

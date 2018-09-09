@@ -13,7 +13,7 @@ shape_config = {
         'expander': True,
         'logo_coords': (44, 128),
         'expander_coords': (95, 134, 90),
-        'header_coords': (126, 120, 0),
+        'header_coords': (113, 35, 270),
 }
 
 Pcb(name='left-pcb', layout=left, shape_config=shape_config)
