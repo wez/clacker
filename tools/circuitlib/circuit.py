@@ -182,6 +182,11 @@ class Circuit(object):
                          'D',
                          'clacker:D_axial' if not surface_mount else 'clacker:D_SOD123')
 
+    def jumper3(self, ref='JP1'):
+        return self.part('Jumper', 'SolderJumper_3_Open',
+                         'Jumper:SolderJumper-3_P1.3mm_Open_Pad1.0x1.5mm_NumberLabels',
+                         ref=ref)
+
     def feather(self, ref='U1'):
         return self.part('MiscellaneousDevices',
                          'ADAFRUIT_FEATHER',
@@ -193,6 +198,13 @@ class Circuit(object):
         return self.part('keyboard_parts',
                          '~KEYSW',
                          'clacker:Mx_Alps_100_reversible')
+
+    def trrs(self, ref='TRRS', dual=False):
+        return self.part('Connector',
+                         'AudioJack4_Ground',
+                         'clacker:CUI_SJ-43514-Dual' if dual else 'clacker:CUI_SJ-43514',
+                         cls=component.TRRSDual if dual else component.TRRS,
+                         ref=ref)
 
     def rj45(self, ref='RJ45'):
         return self.part('Connector',

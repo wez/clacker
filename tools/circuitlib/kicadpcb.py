@@ -19,6 +19,7 @@ library_map = {
     'Diodes_THT': 'https://github.com/KiCad/Diodes_THT.pretty',
     'Pin_Headers': 'https://github.com/KiCad/Pin_Headers.pretty',
     'Connectors': 'https://github.com/KiCad/Connectors.pretty',
+    'Jumper': 'https://github.com/KiCad/kicad-footprints/Jumper.pretty',
     'Keyboard_Parts': 'https://github.com/tmk/keyboard_parts.pretty',
     'imciner2_Modules': 'kicad-deps/imciner2-kicad/modules/Modules.pretty',
     'kicad_teensy': 'kicad-deps/kicad_teensy/Teensy.pretty',
@@ -79,7 +80,13 @@ class Pcb(object):
         if lib.startswith('https://'):
             url = urlparse(lib)
             if url.netloc == 'github.com':
-                lib = 'https://raw.githubusercontent.com' + url.path + '/master'
+                comps = url.path.split('/')[1:]
+                repo = comps[0] + '/' + comps[1]
+                if len(comps) > 2:
+                    extra = '/' + '/'.join(comps[2:])
+                else:
+                    extra = ''
+                lib = 'https://raw.githubusercontent.com/' + repo + '/master' + extra
                 url = urlparse(lib)
             dirname = os.path.join(self._cache_dir, url.path[1:])
             if not os.path.isdir(dirname):

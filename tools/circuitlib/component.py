@@ -277,6 +277,31 @@ class RJ45(Component):
         self.part['3'] += self.circuit.net('SDA')
         self.part['4'] += self.circuit.net('SDL')
 
+class TRRS(Component):
+    def reserve_nets(self):
+        self.part['R2'] += self.circuit.net('3V3')
+        self.part['S'] += self.circuit.net('GND')
+
+    def reserve_spi(self):
+        pass
+
+    def reserve_i2c(self):
+        self.part['T'] += self.circuit.net('SDA')
+        self.part['R1'] += self.circuit.net('SDL')
+
+class TRRSDual(Component):
+    def reserve_nets(self):
+        self.part.add_pins(self.part['R1'].copy(name='R1alt'))
+        self.part.add_pins(self.part['T'].copy(name='Talt'))
+        pass
+
+    def reserve_spi(self):
+        pass
+
+    def reserve_i2c(self):
+        self.part['T'] += self.circuit.net('SDA')
+        self.part['R1'] += self.circuit.net('SDL')
+
 class Expander(Component):
     def reserve_nets(self):
         self.part['3V3'] += self.circuit.net('3V3')

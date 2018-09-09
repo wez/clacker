@@ -164,11 +164,44 @@ class Pcb(targets.Target):
         else:
             header = None
 
+        trrs_type = self.shape_config.get('trrs', None) if self.shape_config else None
+        if trrs_type == 'basic':
+            trrs = circuit.trrs(ref='J1')
+            trrs.set_position(translate(cxlate(shapes['trrs']), 0, 5.5))
+            trrs.set_rotation(90);
+            trrs.reserve_i2c()
+            trrs_right = None
+        elif trrs_type == 'left+right':
+            trrs = circuit.trrs(ref='J1', dual=True)
+            trrs.set_position(translate(cxlate(shapes['trrs']), 0, 5.5))
+            trrs.set_rotation(90);
+            trrs.reserve_i2c()
+            j1 = circuit.jumper3(ref='JP1')
+            j1.set_position(translate(cxlate(shapes['trrs']), -6, 6.5))
+            j1.set_rotation(90)
+            j2 = circuit.jumper3(ref='JP2')
+            j2.set_position(translate(cxlate(shapes['trrs']), 6, 6.5))
+            j2.set_rotation(90)
+
+            j1.part['1'] += circuit.net('3V3')
+            j1.part['2'] += trrs.part['R2']
+            j1.part['3'] += circuit.net('GND')
+
+            j2.part['1'] += circuit.net('GND')
+            j2.part['2'] += trrs.part['S']
+            j2.part['3'] += circuit.net('3V3')
+            trrs_right = None
+        else:
+            trrs = None
+            trrs_right = None
+
         rj45_type = self.shape_config.get('rj45', None) if self.shape_config else None
         if rj45_type == 'basic':
             rj45 = circuit.rj45(ref='J1')
             rj45.set_position(translate(cxlate(shapes['rj45']), 0, 14))
             rj45.set_rotation(180);
+            rj45.reserve_i2c()
+            rj45_right = None
         elif rj45_type == 'left+right':
             rj45 = circuit.rj45(ref='J1')
             rj45.set_position(translate(cxlate(shapes['rj45']), 7.5, 14))
@@ -182,6 +215,11 @@ class Pcb(targets.Target):
         elif rj45_type == 'magjack':
             rj45 = circuit.rj45_magjack()
             rj45.set_position(translate(cxlate(shapes['rj45']), 0, 0))
+            rj45.reserve_i2c()
+            rj45_right = None
+        else:
+            rj45 = None
+            rj45_right = None
 
         cmcu.reserve_spi()
         cmcu.reserve_i2c()
@@ -390,6 +428,10 @@ class Pcb(targets.Target):
             add_net_labels(rj45, 'B.SilkS', mirror=True, rotate=90)
         if rj45_right:
             add_net_labels(rj45_right, 'F.SilkS', rotate=90, numbering=lambda pin: oddeven(pin, remainder=1))
+        if trrs:
+            add_net_labels(trrs, 'B.SilkS', mirror=True, rotate=90)
+        if trrs_right:
+            add_net_labels(trrs_right, 'F.SilkS', rotate=90, numbering=lambda pin: oddeven(pin, remainder=1))
 
         circuit.save(os.path.join(outputs, self.name))
 

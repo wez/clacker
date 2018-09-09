@@ -137,6 +137,27 @@ def make_shapes(layout, shape_config=None):
                                            cap_style=CAP_STYLE.square,
                                            join_style=JOIN_STYLE.mitre)]).convex_hull
 
+    trrs_type = shape_config.get('trrs', None) if shape_config else None
+    if trrs_type == 'basic':
+        trrs_box = box(0, 0, 10, 11)
+    elif trrs_type == 'left+right':
+        trrs_box = box(0, 0, 10, 11)
+    elif trrs_type is None:
+        trrs = None
+    else:
+        raise Exception('handle trrs type %s' % trrs_type)
+
+    if trrs_type is not None:
+        trrs = find_space(overall_hull,
+                                    unary_union([switch_holes, mcu]),
+                                    trrs_box, padding=0)
+        trrs_hull = trrs
+        overall_hull = unary_union([overall_hull,
+                                    trrs_hull.buffer(1,
+                                                cap_style=CAP_STYLE.square,
+                                                join_style=JOIN_STYLE.mitre)]).convex_hull
+
+
     rj45_type = shape_config.get('rj45', None) if shape_config else None
     if rj45_type == 'magjack':
         rj45_box = box(0, 0, 33, 23)
@@ -173,6 +194,8 @@ def make_shapes(layout, shape_config=None):
     mcu = translate(mcu, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
     if rj45:
         rj45 = translate(rj45, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
+    if trrs:
+        trrs = translate(trrs, 0, -(1 + CASE_HOLE_SIZE + HOLE_PADDING))
 
     corner_points = find_corners(overall_hull)
     points = []
@@ -181,6 +204,8 @@ def make_shapes(layout, shape_config=None):
         if corner_dot.intersects(mcu):
             continue
         if rj45 and rj45.intersects(corner_dot):
+            continue
+        if trrs and trrs.intersects(corner_dot):
             continue
         points.append(c)
 
@@ -240,4 +265,5 @@ def make_shapes(layout, shape_config=None):
         'mounting_holes': mounting_holes,
         'mcu': mcu,
         'rj45': rj45,
+        'trrs': trrs,
     }

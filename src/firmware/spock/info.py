@@ -8,7 +8,7 @@ left = KeyLayout('left-keymap.json')
 
 shape_config = {
         'mcu': 'feather',
-        'rj45': 'left+right',
+        'trrs': 'left+right',
         'header': True,
 }
 
