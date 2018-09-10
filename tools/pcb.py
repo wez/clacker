@@ -230,6 +230,7 @@ class Pcb(targets.Target):
         if mcu_type == 'feather':
             cmcu.set_position(translate(cxlate(shapes['mcu']), 12, 26))
             cmcu.set_rotation(90)
+            cmcu.flip()
         elif mcu_type == 'teensy':
             cmcu.set_position(translate(cxlate(shapes['mcu']), 9, 18))
             cmcu.set_rotation(90)
@@ -268,11 +269,15 @@ class Pcb(targets.Target):
             expander = circuit.expander()
             expander.set_value('SparkFun SX1509')
             expander.set_ident('U2')
-            expander.flip()
-            expander.set_position(Point(expander_coords[0],
-                                        expander_coords[1]))
             expander.set_rotation(expander_rotation)
             expander.reserve_i2c()
+
+            expander_pos = Point(expander_coords[0], expander_coords[1])
+            if False:
+                expander_pos = translate(expander_pos, 19, 0)
+                expander.flip()
+
+            expander.set_position(expander_pos)
 
         if rj45:
             rj45.part['5'] += circuit.net('~INT')
@@ -451,15 +456,15 @@ class Pcb(targets.Target):
             add_net_labels(header, 'B.SilkS', rotate=30,
                            mirror=True,
                            numbering=lambda pin: oddeven(pin, remainder=0))
+        add_net_labels(cmcu, 'F.SilkS', mirror=False, rotate=90,
+                       numbering=lambda pin: left_right(pin, 17))
         add_net_labels(cmcu, 'B.SilkS', mirror=True, rotate=90,
-                       numbering=lambda pin: right_left(pin, 17))
-        add_net_labels(cmcu, 'F.SilkS', rotate=90,
-                       numbering=lambda pin: right_left(pin, 17))
+                       numbering=lambda pin: left_right(pin, 17))
         if expander:
-            add_net_labels(expander, 'F.SilkS', rotate=0,
-                           numbering=lambda pin: right_left(pin, 8))
-            add_net_labels(expander, 'B.SilkS', mirror=True, rotate=30,
-                           numbering=lambda pin: right_left(pin, 8))
+            add_net_labels(expander, 'B.SilkS', rotate=990, mirror=True,
+                           numbering=lambda pin: left_right(pin, 8))
+            add_net_labels(expander, 'F.SilkS', mirror=False, rotate=120,
+                           numbering=lambda pin: left_right(pin, 8))
         if rj45:
             add_net_labels(rj45, 'B.SilkS', mirror=True, rotate=90)
         if rj45_right:

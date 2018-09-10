@@ -12,7 +12,7 @@ shape_config = {
         'header': True,
         'expander': True,
         'logo_coords': (44, 128),
-        'expander_coords': (190.85, 55.93, 90),
+        'expander_coords': (173.08, 55.93, 90),
         'header_coords': (111, 33, 268),
         'reserve_pins': {
             # keep an analog pin for future hacking
