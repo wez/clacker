@@ -266,6 +266,21 @@ class Header(Component):
         self.part['3'] += self.circuit.net('SDA')
         self.part['4'] += self.circuit.net('SDL')
 
+class Cirque(Component):
+    def reserve_nets(self):
+        self.part['8'] += self.circuit.net('3V3')
+        self.part['7'] += self.circuit.net('GND')
+        self.part['4'] += self.circuit.net('DR')
+
+    def reserve_spi(self):
+        self.part['2'] += self.circuit.net('MISO')
+        self.part['5'] += self.circuit.net('MOSI')
+        self.part['1'] += self.circuit.net('SCK')
+        self.part['3'] += self.circuit.net('CS')
+
+    def reserve_i2c(self):
+        pass
+
 class RJ45(Component):
     def reserve_nets(self):
         self.part['1'] += self.circuit.net('3V3')

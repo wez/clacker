@@ -20,6 +20,7 @@ library_map = {
     'Pin_Headers': 'https://github.com/KiCad/Pin_Headers.pretty',
     'Connectors': 'https://github.com/KiCad/Connectors.pretty',
     'Jumper': 'https://github.com/KiCad/kicad-footprints/Jumper.pretty',
+    'Connector_PinSocket_2.54mm': 'https://github.com/KiCad/kicad-footprints/Connector_PinSocket_2.54mm.pretty',
     'Keyboard_Parts': 'https://github.com/tmk/keyboard_parts.pretty',
     'imciner2_Modules': 'kicad-deps/imciner2-kicad/modules/Modules.pretty',
     'kicad_teensy': 'kicad-deps/kicad_teensy/Teensy.pretty',

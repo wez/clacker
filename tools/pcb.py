@@ -253,6 +253,14 @@ class Pcb(targets.Target):
             for pin in self.shape_config.get('reserve_pins', {}).get('mcu', []):
                 circuit.defer_pin_assignment(circuit.net(pin), header)
 
+        cirque_coords = self.shape_config.get('cirque_coords', None)
+        if cirque_coords:
+            cirque = circuit.cirque()
+            cirque.set_position(Point(*cirque_coords))
+            cirque.reserve_spi()
+        else:
+            cirque = None
+
         expander = None
         if self.shape_config.get('expander', True):
             expander_coords = self.shape_config.get('expander_coords', (5, 90, 90))
@@ -468,6 +476,12 @@ class Pcb(targets.Target):
         if j2:
             add_net_labels(j2, 'F.SilkS', rotate=90, size=0.6,
                            numbering=lambda pin: oddeven(pin, remainder=1))
+        if cirque:
+            add_net_labels(cirque, 'F.SilkS', rotate=30, size=0.6,
+                           numbering=lambda pin: oddeven(pin, remainder=0))
+            add_net_labels(cirque, 'B.SilkS', rotate=30, size=0.6,
+                           mirror=True,
+                           numbering=lambda pin: oddeven(pin, remainder=0))
 
         circuit.save(os.path.join(outputs, self.name))
 

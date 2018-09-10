@@ -17,7 +17,8 @@ shape_config = {
         'reserve_pins': {
             # keep an analog pin for future hacking
             'mcu': ['A0'],
-        }
+        },
+        'cirque_coords': (113, 137),
 }
 
 Pcb(name='left-pcb', layout=left, shape_config=shape_config)

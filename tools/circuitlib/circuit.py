@@ -244,6 +244,14 @@ class Circuit(object):
                 cls=component.Header,
                 ref=ref)
 
+    def cirque(self, ref='J5'):
+        return self.part(
+                'Connector_Generic',
+                'Conn_02x04_Top_Bottom',
+                'clacker:CIRQUE-TM040040',
+                cls=component.Cirque,
+                ref=ref)
+
     def hole_m3(self):
         ''' the hole is footprint only and doesn't have a part
             for the electrical model '''
