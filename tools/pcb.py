@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 from __future__ import print_function
-
 import os
 import re
+import subprocess
 
 from . import targets
 from . import board
@@ -34,7 +34,13 @@ class Pcb(targets.Target):
         self.shape_config = shape_config
 
     def build(self):
-        print('Gen PCB %s' % self.full_name)
+        commit_date = subprocess.check_output([
+            'git','show','-s','--format=%ad', '--date=short']).decode('ascii').rstrip()
+        commit_info = subprocess.check_output([
+            'git', 'describe', '--always', '--dirty=-dirty']).decode('ascii').rstrip().rstrip()
+        self.repo_state = '%s %s' % (commit_info, commit_date)
+
+        print('Gen PCB %s %s' % (self.full_name, self.repo_state))
         # Compute outputs dir
         outputs = os.path.realpath(
             os.path.join(
@@ -382,6 +388,27 @@ class Pcb(targets.Target):
 
         logo = circuit.spockl()
         logo.set_position(translate(logo_coords))
+
+        version_coords = self.shape_config.get('version_coords', None)
+        if version_coords:
+            circuit.text(
+                    '%s by %s' % (self.layout.layout.name(),
+                                  self.layout.layout.author()),
+                    version_coords,
+                    #layer='F.SilkS',
+                    #size=[1.0, 1.0],
+                    justify='left',
+                    #thickness=0.15
+                    )
+            circuit.text(
+                    'https://github.com/wez/clacker %s %s' % (self.full_name, self.repo_state),
+                    [version_coords[0], version_coords[1] + 2.5],
+                    #layer='F.SilkS',
+                    #size=[1.0, 1.0],
+                    justify='left',
+                    #thickness=0.15
+                    )
+
         logor = circuit.spockr()
         logor.set_position(translate(logo_coords))
 

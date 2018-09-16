@@ -12,13 +12,14 @@ shape_config = {
         'header': True,
         'expander': True,
         'logo_coords': (44, 128),
+        'version_coords': (33, 158),
         'expander_coords': (173.08, 55.93, 90),
         'header_coords': (111, 33, 268),
         'reserve_pins': {
             # keep an analog pin for future hacking
             'mcu': ['A0'],
         },
-        'cirque_coords': (113, 137),
+        'cirque_coords': (114, 137),
 }
 
 Pcb(name='left-pcb', layout=left, shape_config=shape_config)

@@ -150,7 +150,7 @@ class Key(object):
         raise Exception('boo')
 
 
-        
+
 
 class Layout(object):
 
@@ -195,6 +195,9 @@ class Layout(object):
 
     def name(self):
         return self._meta.get('name', 'anon')
+
+    def author(self):
+        return self._meta.get('author', 'anon')
 
     def keys(self):
         return self._keys
