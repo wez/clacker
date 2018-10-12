@@ -264,7 +264,7 @@ class Header(Component):
 
     def reserve_i2c(self):
         self.part['3'] += self.circuit.net('SDA')
-        self.part['4'] += self.circuit.net('SDL')
+        self.part['4'] += self.circuit.net('SCL')
 
 class Cirque(Component):
     def reserve_nets(self):
@@ -291,7 +291,7 @@ class RJ45(Component):
 
     def reserve_i2c(self):
         self.part['3'] += self.circuit.net('SDA')
-        self.part['4'] += self.circuit.net('SDL')
+        self.part['4'] += self.circuit.net('SCL')
 
 class TRRS(Component):
     def reserve_nets(self):
@@ -303,7 +303,7 @@ class TRRS(Component):
 
     def reserve_i2c(self):
         self.part['T'] += self.circuit.net('SDA')
-        self.part['R1'] += self.circuit.net('SDL')
+        self.part['R1'] += self.circuit.net('SCL')
 
 class TRRSDual(Component):
     def reserve_nets(self):
@@ -316,7 +316,7 @@ class TRRSDual(Component):
 
     def reserve_i2c(self):
         self.part['T'] += self.circuit.net('SDA')
-        self.part['R1'] += self.circuit.net('SDL')
+        self.part['R1'] += self.circuit.net('SCL')
 
 class Expander(Component):
     def reserve_nets(self):
