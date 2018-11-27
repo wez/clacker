@@ -8,6 +8,18 @@ class Action(object):
     def __str__(self):
         return self.render()
 
+    def disable(self):
+        return Modifier('*', self)
+
+    def showOnly(self):
+        return Modifier('!', self)
+
+    def debug(self):
+        return Modifier('#', self)
+
+    def transparent(self):
+        return Modifier('%', self)
+
     def union(self, other):
         return Operator('union', [self, other])
 
@@ -22,6 +34,64 @@ class Action(object):
 
     def translate(self, vector):
         return Operator('translate', [self], v=vector)
+
+    def color(self, color):
+        return Operator('color', [self], _=color)
+
+    def up(self, amount):
+        return self.translate([0, 0, amount])
+
+    def down(self, amount):
+        return self.translate([0, 0, -amount])
+
+    def left(self, amount):
+        return self.translate([-amount, 0, 0])
+
+    def right(self, amount):
+        return self.translate([amount, 0, 0])
+
+    def forward(self, amount):
+        return self.translate([0, amount, 0])
+
+    def back(self, amount):
+        return self.translate([0, -amount, 0])
+
+    def __add__(self, other):
+        return self.union(other)
+
+    def __radd__(self, other):
+        return self.union(other)
+
+    def __sub__(self, other):
+        return self.difference(other)
+
+    def __mul__(self, other):
+        return self.intersection(other)
+
+
+def is_iterable(item):
+    try:
+        iter(item)
+        return True
+    except TypeError:
+        return False
+
+
+def scad_repr(val):
+    if isinstance(val, str):
+        return '"' + val + '"'
+    return repr(val)
+
+
+def pretty_pairs(pairs):
+    ''' a poor-mans pretty printer for openscad '''
+    pretty = []
+    for item in pairs:
+        if is_iterable(item) and len(item) > 3:
+            pretty.append(pretty_pairs(item))
+        else:
+            pretty.append(scad_repr(item))
+    return "[\n  " + ",\n  ".join(pretty) + "\n  ]"
 
 
 class Polygon(Action):
@@ -46,7 +116,7 @@ class Polygon(Action):
         for interior in self._shape.interiors:
             add_path(paths, points, interior.coords)
 
-        return 'polygon(%r, %r);\n' % (points, paths)
+        return 'polygon(%s, %s);\n' % (pretty_pairs(points), pretty_pairs(paths))
 
 
 def Shape(shape):
@@ -67,6 +137,15 @@ def Shape(shape):
     raise Exception("unhandled geom: %s" % shape.geom_type)
 
 
+class Modifier(Action):
+    def __init__(self, mod, child):
+        self._mod = mod
+        self._child = child
+
+    def render(self):
+        return self._mod + self._child.render()
+
+
 class Operator(Action):
     def __init__(self, name, actions, **kwargs):
         self._name = name
@@ -77,11 +156,17 @@ class Operator(Action):
         params = []
         if self._kwargs:
             for k, v in self._kwargs.items():
-                params.append('%s=%r' % (k, v))
+                if k == '_':
+                    params.append(scad_repr(v))
+                else:
+                    params.append('%s=%s' % (k, scad_repr(v)))
         params = ', '.join(params)
         lines = ['%s(%s) {' % (self._name, params)]
         for act in self._actions:
-            lines.append(act.render())
+            if isinstance(act, Action):
+                lines.append(act.render())
+            else:
+                raise Exception('%r is not an Action' % act)
         lines.append('}')
         return '\n'.join(lines)
 
@@ -115,7 +200,7 @@ class Script(object):
 
             # Our shapes have [0,0] as the top left, but openscad
             # has it as bottom left, so we need to adjust for that
-            f.write('mirror([0, 1, 0]) color("grey") {\n')
+            f.write('mirror([0, 1, 0]) {\n')
             for act in self._actions:
                 f.write(act.render())
             f.write('}\n')

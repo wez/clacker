@@ -62,10 +62,13 @@ def find_corners(shape):
 def make_shapes(layout, shape_config=None):
     # First pass to compute some shapes
     cap_holes = []
+    raw_cap_holes = []
     for _, cluster in layout.key_clusters().items():
         hull = []
         for k in cluster:
             key_poly = k.polygon()
+
+            add_geoms(raw_cap_holes, key_poly)
 
             # Buffer the outline to increase the chances of having an
             # intersection for keys that are very close to each other.
@@ -86,6 +89,7 @@ def make_shapes(layout, shape_config=None):
     # The buffer(0) here ensures that the geometry remains valid in the case
     # that the inflated key hole outlines intersect with each other.
     cap_holes = MultiPolygon(cap_holes).buffer(0)
+    raw_cap_holes = MultiPolygon(raw_cap_holes).buffer(0)
     overall_hull = unary_union(cap_holes).convex_hull
 
     switch_holes = []
@@ -191,6 +195,7 @@ def make_shapes(layout, shape_config=None):
     CASE_HOLE_SIZE = 3.0  # M3 screws
     HOLE_PADDING = 2.0
     corner_holes = []
+    corner_hole_posts = []
     overall_hull = overall_hull.buffer((CASE_HOLE_SIZE + HOLE_PADDING) / 2,
                                        cap_style=CAP_STYLE.square,
                                        join_style=JOIN_STYLE.mitre)
@@ -218,8 +223,10 @@ def make_shapes(layout, shape_config=None):
     for c in corner_points:
         corner_dot = c.buffer(CASE_HOLE_SIZE / 2)
         corner_holes.append(corner_dot)
+        corner_hole_posts.append(c.buffer((CASE_HOLE_SIZE + 3) / 2))
 
     corner_holes = MultiPolygon(corner_holes)
+    corner_hole_posts = MultiPolygon(corner_hole_posts)
 
     # and take us out the remaining padding, this time we'll round the corners
     overall_hull = overall_hull.buffer((CASE_HOLE_SIZE + HOLE_PADDING) / 2)
@@ -260,10 +267,12 @@ def make_shapes(layout, shape_config=None):
     return {
         'bounds': bounds,
         'cap_holes': cap_holes,
+        'raw_cap_holes': raw_cap_holes,
         'top_plate': top_plate,
         'top_plate_no_corner_holes': top_plate_no_corner_holes,
         'bottom_plate': bottom_plate,
         'corner_holes': corner_holes,
+        'corner_hole_posts': corner_hole_posts,
         'corner_points': corner_points,
         'switch_plate': switch_plate,
         'switch_holes': switch_holes,
