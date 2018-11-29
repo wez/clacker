@@ -35,6 +35,12 @@ class Action(object):
     def translate(self, vector):
         return Operator('translate', [self], v=vector)
 
+    def mirror(self, vector):
+        return Operator('mirror', [self], v=vector)
+
+    def scale(self, vector):
+        return Operator('scale', [self], v=vector)
+
     def color(self, color):
         return Operator('color', [self], _=color)
 
@@ -67,6 +73,15 @@ class Action(object):
 
     def __mul__(self, other):
         return self.intersection(other)
+
+    def quarter(self, x, y, z, offset, x_cut_delta=0, y_cut_delta=0):
+        return Operator('quarter', [self],
+                x=x,
+                y=y,
+                z=z,
+                offset=offset,
+                x_cut_delta=x_cut_delta,
+                y_cut_delta=y_cut_delta)
 
 
 def is_iterable(item):
@@ -188,6 +203,175 @@ class Module(Action):
         return '\n'.join(lines)
 
 
+helper_modules = """
+module quarter(x, y, z, y_cut_delta=0, x_cut_delta=0, offset=[0,0,0]) {
+    tongue_size = 2.8;
+    displacement = 12;
+    // tolerance on the groove side
+    kerf = 0.25;
+
+    y_cut = (y / 2) + y_cut_delta;
+    x_cut = (x / 2) + x_cut_delta;
+    total_z = z * 2;
+
+    module cutout(kerf=0) {
+        rotate([90, 0, 0])
+        cylinder(h=kerf + max(y + abs(y_cut_delta),
+                              x + abs(x_cut_delta))/2,
+                 r=tongue_size, $fn=4);
+    }
+
+    module tongue() {
+        cutout();
+    }
+
+    module groove() {
+        cutout(kerf);
+    }
+
+    module top_left_quadrant() {
+        cube([x_cut, y_cut, total_z]);
+    }
+
+    module offset_top_right() {
+        translate([x_cut, 0, 0]) children();
+    }
+
+    module top_right_quadrant() {
+        offset_top_right()
+        cube([x - x_cut, y_cut, total_z]);
+    }
+
+    module offset_bottom_left() {
+        translate([0, y_cut, 0]) children();
+    }
+
+    module bottom_left_quadrant() {
+        offset_bottom_left()
+        cube([x_cut, y - y_cut, total_z]);
+    }
+
+    module offset_bottom_right() {
+        translate([x_cut, y_cut, 0]) children();
+    }
+
+    module bottom_right_quadrant() {
+        offset_bottom_right()
+        cube([x - x_cut, y - y_cut, total_z]);
+    }
+
+    module offset_top_left_lr() {
+      offset_top_right()
+      translate([0, y_cut, z/2])
+      children();
+    }
+
+    module offset_bottom_left_lr() {
+      offset_bottom_left()
+      translate([x - x_cut, y - y_cut, z/2])
+      children();
+    }
+
+    module offset_top_left_ud() {
+      translate([0, y_cut, z/2])
+      rotate([0, 0, 90])
+      children();
+    }
+
+    module offset_top_right_ud() {
+      offset_bottom_right()
+      translate([0, 0, z/2])
+      rotate([0, 0, 90])
+      children();
+    }
+
+    // top left quadrant
+    translate([-displacement, -displacement, 0]) {
+      intersection() {
+        translate(offset) {
+          difference() {
+            union() {
+              top_left_quadrant();
+              // RHS tongue
+              intersection() {
+                top_right_quadrant();
+                offset_top_left_lr() tongue();
+              }
+            }
+            // bottom groove
+            offset_top_left_ud() groove();
+          }
+        }
+        children(0);
+      }
+    }
+
+    // top right quadrant
+    translate([displacement, -displacement, 0]) {
+      intersection() {
+        translate(offset) {
+          difference() {
+            union() {
+              top_right_quadrant();
+              // bottom tongue
+              intersection() {
+                bottom_right_quadrant();
+                offset_top_right_ud() tongue();
+              }
+            }
+            // LHS groove
+            offset_top_left_lr() groove();
+          }
+        }
+        children(0);
+      }
+    }
+
+    // bottom right quadrant
+    translate([displacement, displacement, 0]) {
+      intersection() {
+        translate(offset) {
+          difference() {
+            union() {
+              bottom_right_quadrant();
+              // LHS tongue
+              intersection() {
+                bottom_left_quadrant();
+                offset_bottom_left_lr() tongue();
+              }
+            }
+            // top groove
+            offset_top_right_ud() groove();
+          }
+        }
+        children(0);
+      }
+    }
+
+    // bottom left quadrant
+    translate([-displacement, displacement, 0]) {
+      intersection() {
+        translate(offset) {
+          difference() {
+            union() {
+              bottom_left_quadrant();
+              // top tongue
+              intersection() {
+                top_left_quadrant();
+                offset_top_left_ud() tongue();
+              }
+            }
+            // RHS groove
+            offset_bottom_left_lr() groove();
+          }
+        }
+        children(0);
+      }
+    }
+}
+
+"""
+
 class Script(object):
     def __init__(self):
         self._modules = []
@@ -195,6 +379,8 @@ class Script(object):
 
     def save(self, filename):
         with filesystem.WriteFileIfChanged(filename) as f:
+            f.write(helper_modules)
+
             for mod in self._modules:
                 f.write(mod.render())
 

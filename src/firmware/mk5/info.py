@@ -20,10 +20,28 @@ shape_config = {
             'mcu': ['A0'],
         },
         'cirque_coords': (114, 137),
+        'azoteq_coords': (112.75, 137),
+        '3dprint_quarter_y_cut_delta': -3,
 }
 
 Pcb(name='left-pcb', layout=left, shape_config=shape_config)
-Case(name='left-case', layout=left, shape_config=shape_config)
+
+def extend(d, base):
+    return dict(d, **base)
+
+Case(name='left-case', layout=left, shape_config=extend({
+        'want_touchpad': False,
+        'want_mcu': False
+    }, shape_config))
+
+Case(name='right-case', layout=left, shape_config=extend({
+        '3dprint_flip': True,
+        'want_touchpad': True,
+        'want_mcu': True,
+        # expose the mcu because we used headers to mount it,
+        # or because we want access to the jst or SWD header
+        'naked_mcu': True,
+    }, shape_config))
 
 #right = KeyLayout(mirror_layout=left)
 #Case(name='right-case', layout=right, shape_config=shape_config)

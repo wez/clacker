@@ -3,6 +3,8 @@ from __future__ import print_function
 
 import os
 from shapely.affinity import (translate, scale, rotate)
+from shapely.geometry import (Point, box)
+from shapely.ops import unary_union
 from . import targets
 from . import filesystem
 from .circuitlib import shape
@@ -26,6 +28,14 @@ PONOKO_LASER_ENGRAVE_AREA = {
     'fill': '#000000',
     'stroke': 'none',
 }
+
+
+def height_of(shape):
+    return abs(shape.bounds[3] - shape.bounds[1])
+
+
+def width_of(shape):
+    return abs(shape.bounds[2] - shape.bounds[0])
 
 
 class Case(targets.Target):
@@ -94,14 +104,30 @@ class Case(targets.Target):
         Shape = openscad.Shape
         scad = openscad.Script()
 
-        mx_switch_height = 11;
-        # with short header socket, uc requires this clearance
-        # mx_switch_height = 16.5;
-        wall_width = 2.4
+        print_bed_width = self.shape_config.get('3dprint_bed_width', 140)
+        print_bed_height = self.shape_config.get('3dprint_bed_height', 140)
+        want_touchpad = self.shape_config.get('want_touchpad', True)
+        want_mcu = self.shape_config.get('want_mcu', True)
+        naked_mcu = self.shape_config.get('naked_mcu', False)
+
+        wall_width = 2.0
         pcb_height = 1.6
+        # space to allow for clearance of keycaps
+        switch_cap_buffer = 0.5
+
+        mx_switch_height = 12 - pcb_height
+        # with short header socket, uc requires this clearance
+        #mx_switch_height = 17 - pcb_height
+
+        # for a quicker test print
+        #mx_switch_height = 3
 
         # lip to hold the bottom case piece
         bottom_lip_height = 2
+
+        max_height = 1.2 * (
+                mx_switch_height + (wall_width * 2) +
+                pcb_height + bottom_lip_height)
 
         bottom_plate = shapes['bottom_plate']
         raw_cap_holes = shapes['raw_cap_holes']
@@ -110,23 +136,84 @@ class Case(targets.Target):
         mcu = shapes['mcu']
         trrs = shapes['trrs']
 
+        tp_center = shapes.get('cirque_coords', None)
+        azoteq_aperture = shapes.get('azoteq_aperture', None)
+        if want_touchpad and azoteq_aperture:
+            touchpad = Shape(azoteq_aperture).linearExtrude(
+                            max_height).down(1).color('purple')
+            # we want the touchpad surface to be as flush to
+            # the panel as possible, so lets eat into the top
+            # panel a little
+            az_pcb_height = 1.2
+            az_foot = shapes['azoteq_footprint']
+            touchpad_footprint = Shape(az_foot).linearExtrude(
+                        mx_switch_height + az_pcb_height).up(
+                            wall_width - az_pcb_height).color('magenta')
+
+            touchpad_enclosure = Shape(az_foot.buffer(wall_width)
+                    ).linearExtrude(
+                        mx_switch_height + wall_width-1).up(
+                            1).color('lime')
+
+            stand_outline = unary_union([
+                    az_foot.buffer(-0.25).symmetric_difference(
+                        az_foot.buffer(-2 * wall_width)),
+                    box(az_foot.bounds[2] - (22 + wall_width),
+                                    az_foot.bounds[1] + 1,
+                                    az_foot.bounds[2] - 22,
+                                    az_foot.bounds[3] - 1)])
+
+            # the portion in contact with the case panel
+            stand_upper = Shape(stand_outline).linearExtrude(mx_switch_height)
+            # cut out some edges to allow cabling and removing the
+            # panels without de-soldering
+            stand_cutout = Shape(box(az_foot.bounds[0],
+                             az_foot.bounds[1] + height_of(az_foot)/4,
+                             az_foot.bounds[2],
+                             az_foot.bounds[3] - height_of(az_foot)/4)
+                            ).linearExtrude(mx_switch_height/2).up(
+                                    mx_switch_height/2)
+            stand_hole = Shape(box(az_foot.bounds[0] + 2*width_of(az_foot)/3,
+                             az_foot.bounds[1] + height_of(az_foot)/4,
+                             az_foot.bounds[2],
+                             az_foot.bounds[3] - height_of(az_foot)/4)
+                            ).linearExtrude(mx_switch_height/2)
+            touchpad_stand = (stand_upper - stand_cutout) - stand_hole
+
+        elif want_touchpad and tp_center:
+            touchpad = Shape(
+                    shapes['cirque_aperture']).linearExtrude(
+                            max_height).down(1).color('purple')
+            touchpad_footprint = Shape(
+                    shapes['cirque_footprint']).linearExtrude(
+                        mx_switch_height).up(
+                            wall_width).color('magenta')
+            touchpad_enclosure = None # TODO
+            touchpad_stand = None # TODO
+        else:
+            touchpad = None
+            touchpad_enclosure = None
+            touchpad_stand = None
+
         # coupled with tools/pcb.py
-        trrs = translate(rotate(trrs, 90), -8.5, 0)
+        trrs = translate(rotate(trrs, 90), -7.5, 0)
 
         # make an elongated version of the hardware so
         # that we can project it through the side of the
         # case.  We're assuming that the hardware is mounted
         # at the back/top of the board here.
-        def height_of(shape):
-            return abs(shape.bounds[3] - shape.bounds[1])
-
         trrs_height = height_of(trrs)
         trrs = (Shape(trrs) + Shape(trrs).back(trrs_height/2))
-        trrs = trrs.linearExtrude(mx_switch_height*2).up(wall_width)
+        trrs = trrs.linearExtrude(max_height).up(wall_width)
 
         mcu_height = height_of(mcu)
+        if naked_mcu:
+            jst_bump = box(mcu.bounds[0], mcu.bounds[1] - 18,
+                        mcu.bounds[2], mcu.bounds[3])
+            jst_bump = Shape(jst_bump).linearExtrude(max_height).color('pink')
+
         mcu = Shape(mcu) + Shape(mcu).back(mcu_height / 2)
-        mcu = mcu.linearExtrude(mx_switch_height*2).up(wall_width)
+        mcu = mcu.linearExtrude(max_height).up(wall_width)
 
         outer_wall = Shape(
                 bottom_plate.buffer(
@@ -137,31 +224,116 @@ class Case(targets.Target):
                     wall_width + bottom_lip_height)
 
         # poke holes for the ports in the outer wall
-        outer_wall -= mcu
+        if want_mcu:
+            outer_wall -= mcu
+            if naked_mcu:
+                outer_wall -= jst_bump
+
         outer_wall -= trrs
 
+        cap_hole_exclusion = raw_cap_holes.buffer(switch_cap_buffer)
         inner_wall = Shape(
                 raw_cap_holes.buffer(
                     wall_width).symmetric_difference(
-                        raw_cap_holes).buffer(0))
+                        cap_hole_exclusion).buffer(0))
+        inner_wall = inner_wall.linearExtrude(
+                    mx_switch_height + wall_width-1).up(1)
+        cap_hole_exclusion = Shape(cap_hole_exclusion).linearExtrude(
+                    mx_switch_height + wall_width-1).up(1)
 
         plate = bottom_plate.symmetric_difference(raw_cap_holes).buffer(0)
 
         posts = Shape(corner_hole_posts).linearExtrude(
                     mx_switch_height + 1).up(wall_width - 1)
+        inner_lip = Shape(
+                bottom_plate.symmetric_difference(
+                    bottom_plate.buffer(-wall_width)
+                    )).linearExtrude(mx_switch_height + 1).up(wall_width - 1)
         post_lugs = Shape(corner_holes).linearExtrude(
-                    pcb_height + 1).up(wall_width + mx_switch_height - 1)
+                    pcb_height + 1 + bottom_lip_height
+                    ).up(wall_width + mx_switch_height - 1)
 
         plate_extruded = Shape(plate).linearExtrude(wall_width)
 
-        scad.add(plate_extruded +
-                posts +
-                post_lugs +
-                inner_wall.linearExtrude(
-                    mx_switch_height + wall_width-1).up(1) +
+        case_top = plate_extruded + \
+                posts + \
+                inner_lip + \
+                post_lugs + \
+                inner_wall + \
                 outer_wall
-                )
 
-        scad.add(mcu.color('skyblue').transparent())
-        scad.add(trrs.color('red').transparent())
-        scad.save(os.path.join(outputs, 'switch-plate.scad'))
+        bounds = bottom_plate.buffer(wall_width).envelope
+        model_width = width_of(bounds)
+        model_height = height_of(bounds)
+        if model_width <= print_bed_width and \
+                model_height <= print_bed_height:
+            needs_cut = False
+        else:
+            needs_cut = True
+
+        # For debug purposes
+        # needs_cut = False
+
+        if touchpad:
+            if not needs_cut:
+                case_top += touchpad.transparent()
+            case_top -= touchpad
+            if touchpad_enclosure:
+                case_top += touchpad_enclosure
+            # and ensure we have clearance for it
+            case_top -= touchpad_footprint
+        if want_mcu:
+            if not needs_cut:
+                case_top += mcu.color('skyblue').transparent()
+            if naked_mcu:
+                if not needs_cut:
+                    case_top += jst_bump.transparent()
+                case_top -= jst_bump
+
+        if not needs_cut:
+            case_top += trrs.color('red').transparent()
+
+        case_top -= cap_hole_exclusion
+
+        def maybe_flip(shape):
+            ''' This logic appears to be inverted... that's because
+                by default we're building the mirror image, so we
+                want to flip by default to produce the correct
+                parts.  If the config says they want to flip then
+                we can skip the flip here. '''
+            if self.shape_config.get('3dprint_flip', False):
+                return shape
+            return shape.mirror([1, 0, 0])
+
+        bounds = bottom_plate.buffer(wall_width).envelope
+        model_width = width_of(bounds)
+        model_height = height_of(bounds)
+        if needs_cut:
+            assert(model_width/2 <= print_bed_width)
+            assert(model_height/2 <= print_bed_height)
+
+            sliced = case_top.quarter(
+                x=model_width ,
+                y=model_height,
+                z=mx_switch_height + wall_width + \
+                        bottom_lip_height,
+                y_cut_delta=self.shape_config.get(
+                    '3dprint_quarter_y_cut_delta', 0),
+                x_cut_delta=self.shape_config.get(
+                    '3dprint_quarter_x_cut_delta', 0),
+                offset=[bounds.bounds[0],
+                        bounds.bounds[1]])
+
+            case_top = sliced
+
+        case_top = case_top.translate([
+                -(bounds.bounds[0] + model_width/2),
+                -(bounds.bounds[1] + model_height/2)])
+
+        scad.add(maybe_flip(case_top))
+
+        if touchpad_stand:
+            scad.add(maybe_flip(touchpad_stand.right(model_width/2).back(model_height/2)))
+        filename = os.path.join(outputs, '%s.scad' % self.name)
+        scad.save(filename)
+        print('Generated %s' % filename)

@@ -264,6 +264,55 @@ def make_shapes(layout, shape_config=None):
 
     switch_plate = cap_holes.symmetric_difference(switch_holes)
 
+    PCBNEW_SPACING = 25
+    xlate_bounds = bottom_plate.envelope
+    # the shapes are transformed by this function when
+    # generating the pcb
+    def cxlate(shape):
+        return translate(shape,
+                            PCBNEW_SPACING - xlate_bounds.bounds[0],
+                            PCBNEW_SPACING - xlate_bounds.bounds[1])
+
+    # however, the cirque_coords is expressed in the raw
+    # pcb coordinate space, so we need to reverse that in order that
+    # the shape data is returned with the same origin
+    def rev_cxlate(shape):
+        return translate(shape,
+                            -PCBNEW_SPACING + xlate_bounds.bounds[0],
+                            -PCBNEW_SPACING + xlate_bounds.bounds[1])
+
+    cirque_coords = shape_config.get('cirque_coords', None)
+    if cirque_coords:
+        cirque_coords = rev_cxlate(Point(cirque_coords))
+        # the aperture for the case
+        cirque_aperture = cirque_coords.buffer(22)
+        # footprint of the touchpad so that it can be
+        # inserted from the rear of the case panel
+        cirque_footprint = cirque_coords.buffer(24.5)
+    else:
+        cirque_aperture = None
+        cirque_footprint = None
+
+    azoteq_coords = shape_config.get('azoteq_coords', None)
+    if azoteq_coords:
+        azoteq_coords = rev_cxlate(Point(azoteq_coords))
+        # using the rectangular (almost square) azoteq touchpad?
+        az_inner_width = 41.25
+        az_inner_height = 38.25
+        az_outer_width = 44
+        az_outer_height = 41
+        azoteq_aperture = translate(
+                box(0, 0, az_inner_width, az_inner_height),
+                azoteq_coords.x - az_inner_width / 2,
+                azoteq_coords.y - az_inner_height / 2)
+        azoteq_footprint = translate(
+                box(0, 0, az_outer_width, az_outer_height),
+                azoteq_coords.x - az_outer_width / 2,
+                azoteq_coords.y - az_outer_height / 2)
+    else:
+        azoteq_aperture = None
+        azoteq_footprint = None
+
     return {
         'bounds': bounds,
         'cap_holes': cap_holes,
@@ -280,4 +329,9 @@ def make_shapes(layout, shape_config=None):
         'mcu': mcu,
         'rj45': rj45,
         'trrs': trrs,
+        'cirque_coords': cirque_coords,
+        'cirque_aperture': cirque_aperture,
+        'cirque_footprint': cirque_footprint,
+        'azoteq_aperture': azoteq_aperture,
+        'azoteq_footprint': azoteq_footprint,
     }
