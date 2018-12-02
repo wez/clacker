@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import subprocess
 from shapely.affinity import (translate, scale, rotate)
 from shapely.geometry import (Point, box)
 from shapely.ops import unary_union
@@ -122,8 +123,11 @@ class Case(targets.Target):
         # for a quicker test print
         #mx_switch_height = 3
 
-        # lip to hold the bottom case piece
-        bottom_lip_height = 2
+        # lip to hold the bottom case piece.  This needs to be taller than
+        # the head of the bolts/screws used to hold the top and bottom together,
+        # otherwise the heads will protrude and make the bottom of the case 
+        # awkward.
+        bottom_lip_height = 3.5
 
         max_height = 1.2 * (
                 mx_switch_height + (wall_width * 2) +
@@ -249,18 +253,44 @@ class Case(targets.Target):
                 bottom_plate.symmetric_difference(
                     bottom_plate.buffer(-wall_width)
                     )).linearExtrude(mx_switch_height + 1).up(wall_width - 1)
-        post_lugs = Shape(corner_holes).linearExtrude(
-                    pcb_height + 1 + bottom_lip_height
-                    ).up(wall_width + mx_switch_height - 1)
 
         plate_extruded = Shape(plate).linearExtrude(wall_width)
 
         case_top = plate_extruded + \
                 posts + \
                 inner_lip + \
-                post_lugs + \
                 inner_wall + \
                 outer_wall
+
+        screw_up_into_case = True
+        if screw_up_into_case:
+            # Make room for insert nuts.  The ones I have on order are M3 nuts
+            # with an exterior diameter of 4.1mm and a length of 3mm.  We want
+            # to allow room for at least a 6mm thread both because that is how
+            # long my bolts are and because when heating and pressing these
+            # in to the case, some plastic material can pool below.
+            screw_thread_height = mx_switch_height #  8
+            inset_nut_height = 3
+            # TODO: 3mm bolt head height
+
+            screw_thread_clearance = Shape(corner_holes).linearExtrude(
+                        screw_thread_height + 2
+                        ).up(wall_width + (mx_switch_height - screw_thread_height))
+
+            inset_nut_clearance = Shape(
+                    # the advice I've been given is to use a 3.5mm hole for these,
+                    # so buffer the M3 size by 0.5mm diameter
+                    corner_holes.buffer(0.25)
+                    ).linearExtrude(inset_nut_height + 0.5).up(
+                            wall_width + (mx_switch_height - inset_nut_height) - 0.5)
+
+            case_top -= screw_thread_clearance
+            case_top -= inset_nut_clearance
+        else:
+            post_lugs = Shape(corner_holes).linearExtrude(
+                        pcb_height + 1 + bottom_lip_height
+                        ).up(wall_width + mx_switch_height - 1)
+            case_top += post_lugs
 
         bounds = bottom_plate.buffer(wall_width).envelope
         model_width = width_of(bounds)
@@ -308,32 +338,71 @@ class Case(targets.Target):
         bounds = bottom_plate.buffer(wall_width).envelope
         model_width = width_of(bounds)
         model_height = height_of(bounds)
+
+        case_top = scad.add_module('case_top', case_top)
+
+        stl_to_render = []
+
         if needs_cut:
             assert(model_width/2 <= print_bed_width)
             assert(model_height/2 <= print_bed_height)
 
-            sliced = case_top.quarter(
-                x=model_width ,
-                y=model_height,
-                z=mx_switch_height + wall_width + \
-                        bottom_lip_height,
-                y_cut_delta=self.shape_config.get(
-                    '3dprint_quarter_y_cut_delta', 0),
-                x_cut_delta=self.shape_config.get(
-                    '3dprint_quarter_x_cut_delta', 0),
-                offset=[bounds.bounds[0],
-                        bounds.bounds[1]])
+            for (name, piece) in [
+                                  ('sliced_case_top_left', 0),
+                                  ('sliced_case_top_right', 1),
+                                  ('sliced_case_bottom_left', 2),
+                                  ('sliced_case_bottom_right', 3),
+                                  ('sliced_case_top', None)
+                                ]:
+                sliced = scad.add_module(name, case_top.quarter(
+                    x=model_width,
+                    y=model_height,
+                    z=mx_switch_height + wall_width + \
+                            bottom_lip_height,
+                    y_cut_delta=self.shape_config.get(
+                        '3dprint_quarter_y_cut_delta', 0),
+                    x_cut_delta=self.shape_config.get(
+                        '3dprint_quarter_x_cut_delta', 0),
+                    offset=[bounds.bounds[0],
+                            bounds.bounds[1]],
+                    piece=piece))
 
-            case_top = sliced
+                # Emit a separate scad file per quadrant for easier export
+                # of individual parts as STL files
+                part = openscad.Script()
+                part.use('%s.scad' % self.name)
+                part.add(maybe_flip(sliced.translate([
+                        -(bounds.bounds[0] + model_width/2),
+                        -(bounds.bounds[1] + model_height/2)])))
+
+                scad_name = os.path.join(outputs, '%s-%s.scad' % (self.name, name))
+                stl_name = os.path.join(outputs, '%s-%s.stl' % (self.name, name))
+                part.save(scad_name)
+                if piece is not None:
+                    stl_to_render.append((scad_name, stl_name))
 
         case_top = case_top.translate([
                 -(bounds.bounds[0] + model_width/2),
                 -(bounds.bounds[1] + model_height/2)])
+        scad.add(case_top)
 
-        scad.add(maybe_flip(case_top))
+        top_module = openscad.Module('case_top', [maybe_flip(case_top)])
 
         if touchpad_stand:
-            scad.add(maybe_flip(touchpad_stand.right(model_width/2).back(model_height/2)))
-        filename = os.path.join(outputs, '%s.scad' % self.name)
-        scad.save(filename)
-        print('Generated %s' % filename)
+            stand_script = openscad.Script()
+            stand_script.use('%s.scad' % self.name)
+            stand_script.add(maybe_flip(touchpad_stand.right(model_width/2).back(model_height/2)))
+            stand_script.save(os.path.join(outputs, 'touchpad_stand-%s.scad' % name))
+
+        scad_filename = os.path.join(outputs, '%s.scad' % self.name)
+        stl_filename = os.path.join(outputs, '%s.stl' % self.name)
+        stl_to_render.append((scad_filename, stl_name))
+        scad.save(scad_filename)
+
+        procs = []
+        for (scad_name, stl_name) in stl_to_render:
+            print('Rendering %s...' % stl_name)
+            procs.append(subprocess.Popen(['openscad', '-o', stl_name, scad_name]))
+        for proc in procs:
+            proc.wait()
+

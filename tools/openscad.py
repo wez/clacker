@@ -1,4 +1,5 @@
 from . import filesystem
+import subprocess
 
 
 class Action(object):
@@ -74,14 +75,15 @@ class Action(object):
     def __mul__(self, other):
         return self.intersection(other)
 
-    def quarter(self, x, y, z, offset, x_cut_delta=0, y_cut_delta=0):
+    def quarter(self, x, y, z, offset, x_cut_delta=0, y_cut_delta=0, piece=None):
         return Operator('quarter', [self],
                 x=x,
                 y=y,
                 z=z,
                 offset=offset,
                 x_cut_delta=x_cut_delta,
-                y_cut_delta=y_cut_delta)
+                y_cut_delta=y_cut_delta,
+                piece=piece)
 
 
 def is_iterable(item):
@@ -95,6 +97,8 @@ def is_iterable(item):
 def scad_repr(val):
     if isinstance(val, str):
         return '"' + val + '"'
+    if val is None:
+        return 'undef'
     return repr(val)
 
 
@@ -187,16 +191,16 @@ class Operator(Action):
 
 
 class Module(Action):
-    def __init__(self, name):
+    def __init__(self, name, actions=None):
         self._name = name
-        self._actions = []
+        self._actions = actions or []
 
     def add(self, action):
         assert isinstance(action, Action)
         self._actions.append(action)
 
     def render(self):
-        lines = ['module %s() {']
+        lines = ['module %s() {' % self._name]
         for act in self._actions:
             lines.append(act.render())
         lines.append('}')
@@ -204,7 +208,7 @@ class Module(Action):
 
 
 helper_modules = """
-module quarter(x, y, z, y_cut_delta=0, x_cut_delta=0, offset=[0,0,0]) {
+module quarter(x, y, z, y_cut_delta=0, x_cut_delta=0, offset=[0,0,0], piece) {
     tongue_size = 2.8;
     displacement = 12;
     // tolerance on the groove side
@@ -286,6 +290,7 @@ module quarter(x, y, z, y_cut_delta=0, x_cut_delta=0, offset=[0,0,0]) {
     }
 
     // top left quadrant
+    if (piece == undef || piece == 0)
     translate([-displacement, -displacement, 0]) {
       intersection() {
         translate(offset) {
@@ -307,6 +312,7 @@ module quarter(x, y, z, y_cut_delta=0, x_cut_delta=0, offset=[0,0,0]) {
     }
 
     // top right quadrant
+    if (piece == undef || piece == 1)
     translate([displacement, -displacement, 0]) {
       intersection() {
         translate(offset) {
@@ -328,6 +334,7 @@ module quarter(x, y, z, y_cut_delta=0, x_cut_delta=0, offset=[0,0,0]) {
     }
 
     // bottom right quadrant
+    if (piece == undef || piece == 2)
     translate([displacement, displacement, 0]) {
       intersection() {
         translate(offset) {
@@ -349,6 +356,7 @@ module quarter(x, y, z, y_cut_delta=0, x_cut_delta=0, offset=[0,0,0]) {
     }
 
     // bottom left quadrant
+    if (piece == undef || piece == 3)
     translate([-displacement, displacement, 0]) {
       intersection() {
         translate(offset) {
@@ -376,20 +384,43 @@ class Script(object):
     def __init__(self):
         self._modules = []
         self._actions = []
+        self._uses = []
 
-    def save(self, filename):
+    def save(self, filename, render_stl=False):
         with filesystem.WriteFileIfChanged(filename) as f:
+            for use in self._uses:
+                f.write('use <%s>\n' % use)
+            f.write('\n')
+
             f.write(helper_modules)
 
             for mod in self._modules:
+                f.write('\n')
                 f.write(mod.render())
+                f.write('\n')
 
             # Our shapes have [0,0] as the top left, but openscad
             # has it as bottom left, so we need to adjust for that
-            f.write('mirror([0, 1, 0]) {\n')
+            f.write('\nmirror([0, 1, 0]) {\n')
             for act in self._actions:
+                f.write('\n')
                 f.write(act.render())
+                f.write('\n')
             f.write('}\n')
+        print('Generated %s' % filename)
+        if render_stl:
+            stl_name = filename[:-4] + "stl"
+            print('Rendering %s' % stl_name)
+            subprocess.call(['openscad', '-o', stl_name, filename])
+
+    def use(self, filename):
+        self._uses.append(filename)
+
+    def add_module(self, name, thing):
+        if not isinstance(thing, Action):
+            raise Exception('unsupported type')
+        self._modules.append(Module(name, [thing]))
+        return Operator(name, [])
 
     def add(self, thing):
         if isinstance(thing, Module):
