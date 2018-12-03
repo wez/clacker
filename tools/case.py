@@ -392,14 +392,18 @@ class Case(targets.Target):
             stand_script = openscad.Script()
             stand_script.use('%s.scad' % self.name)
             stand_script.add(maybe_flip(touchpad_stand.right(model_width/2).back(model_height/2)))
-            stand_script.save(os.path.join(outputs, 'touchpad_stand-%s.scad' % name))
+            scad_filename = os.path.join(outputs, 'touchpad_stand.scad')
+            stl_name = os.path.join(outputs, 'touchpad_stand.stl')
+            stand_script.save(scad_filename)
+            stl_to_render.append((scad_filename, stl_name))
 
         scad_filename = os.path.join(outputs, '%s.scad' % self.name)
         stl_filename = os.path.join(outputs, '%s.stl' % self.name)
-        stl_to_render.append((scad_filename, stl_name))
+        stl_to_render.append((scad_filename, stl_filename))
         scad.save(scad_filename)
 
         procs = []
+        print("Rendering %d parts" % len(stl_to_render))
         for (scad_name, stl_name) in stl_to_render:
             print('Rendering %s...' % stl_name)
             procs.append(subprocess.Popen(['openscad', '-o', stl_name, scad_name]))

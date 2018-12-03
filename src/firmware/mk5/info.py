@@ -40,7 +40,7 @@ Case(name='right-case', layout=left, shape_config=extend({
         'want_mcu': True,
         # expose the mcu because we used headers to mount it,
         # or because we want access to the jst or SWD header
-        'naked_mcu': True,
+        'naked_mcu': False,
     }, shape_config))
 
 #right = KeyLayout(mirror_layout=left)
